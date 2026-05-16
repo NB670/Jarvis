@@ -1,36 +1,81 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Jarvis (MVP)
 
-## Getting Started
+Personal planning assistant: dashboard, goals, tasks, reflections, typed chat with an OpenAI-compatible LLM, and **approval-only** writes from conversations.
 
-First, run the development server:
+## Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Next.js (App Router) + TypeScript + Tailwind CSS v4  
+- Prisma ORM + SQLite  
+- Server Actions for CRUD and suggestion approvals  
+- API routes: `POST /api/chat`, `POST /api/recommend`  
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Prerequisites
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Node.js 20+ recommended  
+- An API key for any OpenAI-compatible HTTP API (`/v1/chat/completions`)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Setup
 
-## Learn More
+1. **Install dependencies**
 
-To learn more about Next.js, take a look at the following resources:
+   ```bash
+   npm install
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+2. **Environment**
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+   ```bash
+   cp .env.example .env
+   ```
 
-## Deploy on Vercel
+   Edit `.env`:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+   - `DATABASE_URL` — default `file:./dev.db` (relative to `prisma/`)
+   - `OPENAI_API_KEY` — required for chat and “What should I work on?”
+   - `OPENAI_BASE_URL` — optional; default `https://api.openai.com/v1`
+   - `OPENAI_MODEL` — optional; default `gpt-4o-mini`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+3. **Database**
+
+   ```bash
+   npx prisma migrate dev
+   npx prisma db seed
+   ```
+
+4. **Run**
+
+   ```bash
+   npm run dev
+   ```
+
+   Open [http://localhost:3000](http://localhost:3000).
+
+## Scripts
+
+| Command | Purpose |
+|--------|--------|
+| `npm run dev` | Dev server |
+| `npm run build` / `npm start` | Production build / start |
+| `npm run db:migrate` | Create/apply migrations (`prisma migrate dev`) |
+| `npm run db:seed` | Run seed |
+| `npm run db:generate` | Regenerate Prisma Client |
+
+## Architecture (modular)
+
+- `src/lib/db/` — Prisma helpers (goals, tasks, reflections, suggestions, dashboard snapshot, chat persistence)  
+- `src/lib/memory/build-context.ts` — Builds bounded **MEMORY_CONTEXT** for the LLM  
+- `src/lib/llm/` — HTTP client, prompts, JSON parsing, applying approved suggestions  
+- `src/lib/jarvis/` — Chat and recommendation orchestration (UI-agnostic; easy to call from voice later)  
+- `src/app/api/chat` / `recommend` — Thin HTTP layer with error handling  
+
+Chat uses **recent messages** from SQLite plus **current structured memory**, not the full transcript. Jarvis returns JSON (`message` + `suggested_updates`). Each update is stored as `SuggestedUpdate` with `pending` until you approve it on the dashboard or chat page.
+
+## Seed data
+
+Includes sample long-term/short-term goals, three tasks, one reflection, and primary focus text matching the Jarvis MVP brief.
+
+## Notes
+
+- **No auth** in this MVP — run locally or behind a trusted network.  
+- Some OpenAI-compatible servers may not support `response_format: { type: "json_object" }`; if chat fails, try OpenAI or a compatible proxy, or adjust `src/lib/llm/client.ts`.  
+- Local SQLite file: `prisma/dev.db` (gitignored).
