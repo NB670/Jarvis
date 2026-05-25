@@ -7,8 +7,8 @@
 
 Jarvis is a personal AI planning partner built as two clients sharing one backend:
 
-- **Notes app** — a lightweight writing surface available on phone and Mac. Apple Notes-style: note list + editor, inline checklists, nothing else. Phone-first, also accessible on Mac.
-- **Jarvis app** — a macOS Electron app with two sections: Chat (full planning conversations + daily brief) and Memory (what Jarvis knows about you, editable).
+- **Notes app** — a dedicated writing surface on Mac (Electron, in the dock) and phone (PWA). Apple Notes-style: note list + editor, inline checklists, nothing else. Same frontend code deployed to both targets.
+- **Jarvis app** — a PWA (browser on Mac, phone, eventually replaced by voice). Two sections: Chat (full planning conversations + daily brief) and Memory (what Jarvis knows about you, editable). The chat UI is secondary — voice is the long-term primary interface.
 
 One shared Next.js + Prisma backend serves both. Notes are just data in the same database that Jarvis reads as context. No sync layer needed.
 
@@ -51,12 +51,14 @@ Notes, chat, and voice are all equal input channels. The memory core is the pers
          └──────────────────┘
 ```
 
-**Notes client:** starts as a PWA (Next.js app in mobile Safari), becomes a native app later. Simple, phone-first, no AI features in the UI.
+**Notes client:**
+- **Mac:** Electron app in the dock. Main process handles system tray (quick new note), Apple Calendar sync via AppleScript bridge. Renderer is the Next.js Notes UI.
+- **Phone:** Same Next.js Notes frontend served as a PWA (mobile Safari). Full-screen editor on small screens, list/editor split on larger screens.
 
-**Jarvis client (Electron):**
-- **Main process:** manages the window, system tray popover, Apple Calendar sync via AppleScript bridge, native notifications
-- **Renderer:** Next.js app running inside the Electron window — no browser needed
-- **System tray:** small Jarvis icon in the menu bar; click → popover for quick queries and daily brief without opening the full window
+**Jarvis client (PWA only):**
+- Served by the same Next.js backend, accessible in any browser.
+- No Electron wrapper — the primary long-term interface is voice, not a desktop window.
+- System tray / quick access handled by the Notes Electron app instead.
 
 ---
 
@@ -154,7 +156,7 @@ Reads: upcoming task checklist items from notes + calendar events for today/this
 
 ## UI
 
-### Notes Client (PWA → native later)
+### Notes Client (Electron on Mac, PWA on phone)
 
 Apple Notes layout: note list sidebar on the left, full editor on the right.
 
@@ -162,10 +164,10 @@ Apple Notes layout: note list sidebar on the left, full editor on the right.
 - New note button at top of sidebar
 - Editor: clean, minimal — free text with inline checklist support (`- [ ]` renders as a checkbox)
 - No tags, folders, or formatting toolbar
-- Optimised for mobile: full-screen editor on small screens, list/editor split on tablet/desktop
-- Jarvis can create notes and append to existing ones from the Jarvis app
+- Responsive: full-screen editor on phone, list/editor split on Mac
+- Jarvis can create notes and append to existing ones from the Jarvis PWA
 
-### Jarvis Client (Electron — macOS)
+### Jarvis Client (PWA)
 
 Two tabs:
 
@@ -203,10 +205,10 @@ Background sync only — no Calendar tab in the UI (user manages calendar in App
 | Dashboard, Goals, Tasks, Reflections pages | Removed |
 | WhatNextPanel, PendingSuggestionsList components | Removed |
 | SQLite schema via Prisma | New schema: Note, JarvisMemory, ChatMessage |
-| Next.js web app in browser | Two clients: Electron (Jarvis) + PWA (Notes) |
-| Chat at /chat | Jarvis tab in Electron app (merged chat + brief) |
-| No notes feature | Separate Notes PWA (new) |
-| Hidden DB memory context | Memory tab in Electron app (new, editable) |
+| Next.js web app in browser | Two clients: Notes (Electron on Mac + PWA on phone) + Jarvis (PWA) |
+| Chat at /chat | Jarvis tab in Jarvis PWA (merged chat + brief) |
+| No notes feature | Separate Notes app — Electron on Mac, PWA on phone (new) |
+| Hidden DB memory context | Memory tab in Jarvis PWA (new, editable) |
 
 ---
 
