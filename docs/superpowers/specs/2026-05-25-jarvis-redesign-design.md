@@ -5,9 +5,14 @@
 
 ## Overview
 
-Jarvis is a personal AI planning partner — a macOS desktop app (Electron) with three sections: Notes, Jarvis (chat + daily brief), and Memory. It understands your goals, tracks what you've been neglecting, and holds full planning conversations with internet access. All inputs (notes, chat, voice later) feed a structured memory core that Jarvis maintains and uses as context on every interaction.
+Jarvis is a personal AI planning partner built as two clients sharing one backend:
 
-The guiding principle: **Jarvis knows you.** Notes and chat are just different ways to communicate with it. The memory is what persists and grows.
+- **Notes app** — a lightweight writing surface available on phone and Mac. Apple Notes-style: note list + editor, inline checklists, nothing else. Phone-first, also accessible on Mac.
+- **Jarvis app** — a macOS Electron app with two sections: Chat (full planning conversations + daily brief) and Memory (what Jarvis knows about you, editable).
+
+One shared Next.js + Prisma backend serves both. Notes are just data in the same database that Jarvis reads as context. No sync layer needed.
+
+The guiding principle: **Jarvis knows you.** Notes, chat, and voice are all just ways to communicate with it. The memory is what persists and grows.
 
 ---
 
@@ -26,8 +31,29 @@ Voice (future)       →                          →  Update memory
 
 Notes, chat, and voice are all equal input channels. The memory core is the persistent brain.
 
-### macOS App (Electron)
+### Two Clients, One Backend
 
+```
+┌─────────────────┐      ┌──────────────────────────┐
+│   Notes Client  │      │      Jarvis Client        │
+│  (phone + mac)  │      │      (macOS Electron)     │
+│                 │      │                           │
+│  Note list      │      │  Chat + Brief             │
+│  Editor         │      │  Memory                   │
+│  Checklists     │      │  System tray popover      │
+└────────┬────────┘      └────────────┬─────────────┘
+         │                            │
+         └──────────┬─────────────────┘
+                    ▼
+         ┌──────────────────┐
+         │  Next.js + Prisma │
+         │  (shared backend) │
+         └──────────────────┘
+```
+
+**Notes client:** starts as a PWA (Next.js app in mobile Safari), becomes a native app later. Simple, phone-first, no AI features in the UI.
+
+**Jarvis client (Electron):**
 - **Main process:** manages the window, system tray popover, Apple Calendar sync via AppleScript bridge, native notifications
 - **Renderer:** Next.js app running inside the Electron window — no browser needed
 - **System tray:** small Jarvis icon in the menu bar; click → popover for quick queries and daily brief without opening the full window
@@ -128,32 +154,33 @@ Reads: upcoming task checklist items from notes + calendar events for today/this
 
 ## UI
 
-### Navigation
-Three tabs at the top of the window:
+### Notes Client (PWA → native later)
 
-```
-[ Notes ]  [ Jarvis ]  [ Memory ]
-```
-
-### Notes Tab
 Apple Notes layout: note list sidebar on the left, full editor on the right.
 
 - Note list shows title + first line preview, sorted by `updatedAt` descending
 - New note button at top of sidebar
 - Editor: clean, minimal — free text with inline checklist support (`- [ ]` renders as a checkbox)
-- No tags, folders, or formatting toolbar — keep it simple
-- Jarvis can create notes and append to existing ones from chat
+- No tags, folders, or formatting toolbar
+- Optimised for mobile: full-screen editor on small screens, list/editor split on tablet/desktop
+- Jarvis can create notes and append to existing ones from the Jarvis app
 
-### Jarvis Tab
-Full-width conversation interface. Chat and brief are merged — asking "what should I work on today?" is just a message.
+### Jarvis Client (Electron — macOS)
+
+Two tabs:
+
+```
+[ Jarvis ]  [ Memory ]
+```
+
+**Jarvis tab:** Full-width conversation interface. Chat and brief are merged — asking "what should I work on today?" is just a message.
 
 - Message history scrolls up
 - Input at the bottom
 - Jarvis responses can include action confirmations inline: "I've blocked off Tuesday afternoon in your calendar and added a checklist to your Goals note."
 - Brief is triggered by the user asking — no separate page or button
 
-### Memory Tab
-Editable view of `JarvisMemory`. Displayed as cards grouped by category (Goals, Habits, Interests, Key Facts, Patterns, Preferences). Each card is editable inline. User can add new entries or delete stale ones.
+**Memory tab:** Editable view of `JarvisMemory`. Displayed as cards grouped by category (Goals, Habits, Interests, Key Facts, Patterns, Preferences). Each card is editable inline. User can add new entries or delete stale ones.
 
 ---
 
@@ -176,17 +203,17 @@ Background sync only — no Calendar tab in the UI (user manages calendar in App
 | Dashboard, Goals, Tasks, Reflections pages | Removed |
 | WhatNextPanel, PendingSuggestionsList components | Removed |
 | SQLite schema via Prisma | New schema: Note, JarvisMemory, ChatMessage |
-| Next.js web app in browser | Electron wrapper added |
-| Chat at /chat | Jarvis tab (merged chat + brief) |
-| No notes feature | Notes tab (new) |
-| Hidden DB memory context | Memory tab (new, editable) |
+| Next.js web app in browser | Two clients: Electron (Jarvis) + PWA (Notes) |
+| Chat at /chat | Jarvis tab in Electron app (merged chat + brief) |
+| No notes feature | Separate Notes PWA (new) |
+| Hidden DB memory context | Memory tab in Electron app (new, editable) |
 
 ---
 
 ## Out of Scope (Future)
 
 - Voice interface
-- Phone app
+- Native phone app (Notes PWA becomes native)
 - Smart home integrations (bulbs, alarms)
-- Multi-device sync
 - Authentication / multi-user
+- Notes PWA → native iOS app
