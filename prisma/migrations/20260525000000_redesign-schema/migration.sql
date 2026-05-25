@@ -19,7 +19,7 @@ CREATE TABLE "Note" (
 -- CreateTable
 CREATE TABLE "JarvisMemory" (
     "id" TEXT NOT NULL PRIMARY KEY DEFAULT 'default',
-    "data" JSONB NOT NULL DEFAULT '{}',
+    "data" TEXT NOT NULL DEFAULT '{}',
     "updatedAt" DATETIME NOT NULL
 );
 
@@ -32,6 +32,9 @@ CREATE TABLE "CalendarEvent" (
     "endAt" DATETIME NOT NULL,
     "syncedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- DropTable (ChatMessage from init migration)
+DROP TABLE IF EXISTS "ChatMessage";
 
 -- CreateTable
 CREATE TABLE "ChatMessage" (
