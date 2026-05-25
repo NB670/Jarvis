@@ -9,6 +9,7 @@ interface Message {
   role: 'system' | 'user' | 'assistant' | 'tool'
   content: string
   tool_call_id?: string
+  tool_calls?: ToolCall[]
 }
 
 interface ToolCall {
@@ -98,7 +99,7 @@ export async function chat(messages: Message[]): Promise<string> {
 
     const extended: Message[] = [
       ...messages,
-      { role: 'assistant', content: choice.message.content ?? '', tool_call_id: undefined },
+      { role: 'assistant', content: choice.message.content ?? '', tool_calls: choice.message.tool_calls },
       { role: 'tool', content: searchResult, tool_call_id: tc.id },
     ]
 
