@@ -33,6 +33,11 @@ describe('createNote', () => {
     expect(note.title).toBe('')
     expect(note.content).toBe('')
   })
+
+  it('extracts title from Tiptap HTML paragraph when no heading', async () => {
+    const note = await createNote('<p>My plan for the year</p>')
+    expect(note.title).toBe('My plan for the year')
+  })
 })
 
 describe('listNotes', () => {
@@ -60,6 +65,20 @@ describe('deleteNote', () => {
     const note = await createNote('To delete')
     await deleteNote(note.id)
     const found = await getNote(note.id)
+    expect(found).toBeNull()
+  })
+})
+
+describe('getNote', () => {
+  it('returns the note by id', async () => {
+    const note = await createNote('Find me')
+    const found = await getNote(note.id)
+    expect(found).not.toBeNull()
+    expect(found!.title).toBe('Find me')
+  })
+
+  it('returns null for a nonexistent id', async () => {
+    const found = await getNote('nonexistent-id')
     expect(found).toBeNull()
   })
 })

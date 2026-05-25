@@ -4,14 +4,14 @@ export function deriveTitle(content: string): string {
   if (content.trimStart().startsWith('<')) {
     // HTML from Tiptap — extract text from first heading or paragraph
     const headingMatch = content.match(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/i)
-    if (headingMatch) return headingMatch[1].replace(/<[^>]+>/g, '').trim()
+    if (headingMatch) return headingMatch[1].replace(/<[^>]+>/g, '').trim().slice(0, 80)
     const pMatch = content.match(/<p[^>]*>(.*?)<\/p>/i)
     if (pMatch) return pMatch[1].replace(/<[^>]+>/g, '').trim().slice(0, 80)
     return ''
   }
   // Plain text / markdown
   const firstLine = content.split('\n').find((l) => l.trim() !== '') ?? ''
-  return firstLine.replace(/^#+\s*/, '').trim()
+  return firstLine.replace(/^#+\s*/, '').trim().slice(0, 80)
 }
 
 export async function createNote(content: string) {
