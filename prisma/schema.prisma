@@ -7,119 +7,25 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum GoalType {
-  long_term
-  short_term
-}
-
-enum GoalPriority {
-  low
-  medium
-  high
-}
-
-enum GoalStatus {
-  active
-  paused
-  completed
-  archived
-}
-
-enum TaskStatus {
-  todo
-  in_progress
-  blocked
-  done
-  archived
-}
-
-enum TaskUrgency {
-  low
-  medium
-  high
-}
-
-enum TaskEffort {
-  small
-  medium
-  large
-}
-
-enum SuggestedUpdateType {
-  create_goal
-  update_goal
-  create_task
-  update_task
-  create_reflection
-}
-
-enum SuggestedUpdateStatus {
-  pending
-  approved
-  rejected
-}
-
 enum ChatRole {
   user
   assistant
 }
 
-model Goal {
-  id           String        @id @default(cuid())
-  title        String
-  description  String        @default("")
-  type         GoalType
-  priority     GoalPriority
-  status       GoalStatus
-  whyItMatters String        @default("")
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+model Note {
+  id        String   @id @default(cuid())
+  title     String   @default("")
+  content   String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  tasks       Task[]
-  reflections Reflection[]
-
-  @@index([status, type])
+  @@index([updatedAt])
 }
 
-model Task {
-  id          String      @id @default(cuid())
-  title       String
-  description String      @default("")
-  goalId      String?
-  goal        Goal?       @relation(fields: [goalId], references: [id], onDelete: SetNull)
-  status      TaskStatus
-  urgency     TaskUrgency
-  effort      TaskEffort
-  dueDate     DateTime?
-  nextAction  String?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-
-  @@index([status])
-  @@index([goalId])
-  @@index([dueDate])
-}
-
-model Reflection {
-  id            String   @id @default(cuid())
-  content       String
-  relatedGoalId String?
-  relatedGoal   Goal?    @relation(fields: [relatedGoalId], references: [id], onDelete: SetNull)
-  createdAt     DateTime @default(now())
-
-  @@index([relatedGoalId])
-  @@index([createdAt])
-}
-
-model SuggestedUpdate {
-  id        String                @id @default(cuid())
-  type      SuggestedUpdateType
-  payload   Json
-  reason    String
-  status    SuggestedUpdateStatus @default(pending)
-  createdAt DateTime              @default(now())
-
-  @@index([status])
+model JarvisMemory {
+  id        String   @id @default("default")
+  data      Json     @default("{}")
+  updatedAt DateTime @updatedAt
 }
 
 model ChatMessage {
@@ -131,8 +37,13 @@ model ChatMessage {
   @@index([createdAt])
 }
 
-model AppState {
-  id           String   @id @default("default")
-  primaryFocus String?
-  updatedAt    DateTime @updatedAt
+model CalendarEvent {
+  id         String   @id @default(cuid())
+  externalId String   @unique
+  title      String
+  startAt    DateTime
+  endAt      DateTime
+  syncedAt   DateTime @default(now())
+
+  @@index([startAt])
 }
