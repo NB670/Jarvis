@@ -21,3 +21,41 @@ export type JarvisRecommendJson = {
   next_smallest_action: string;
   low_energy_fallback: string;
 };
+
+/** Jarvis memory system types */
+export interface MemoryGoal {
+  title: string
+  horizon: 'long_term' | 'short_term'
+  target?: string
+  lastEngaged?: string
+  priority?: 'low' | 'medium' | 'high'
+}
+
+export interface MemoryHabit {
+  title: string
+  frequency?: string
+  lastMentioned?: string
+}
+
+export interface JarvisMemoryData {
+  goals: MemoryGoal[]
+  habits: MemoryHabit[]
+  interests: string[]
+  patterns: string[]
+  keyFacts: string[]
+  preferences: Record<string, string>
+}
+
+export const EMPTY_MEMORY: JarvisMemoryData = {
+  goals: [],
+  habits: [],
+  interests: [],
+  patterns: [],
+  keyFacts: [],
+  preferences: {},
+}
+
+export interface ChatMessage {
+  role: 'system' | 'user' | 'assistant'
+  content: string
+}
