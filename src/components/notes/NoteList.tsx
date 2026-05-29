@@ -13,6 +13,7 @@ interface Props {
   onDelete: (id: string) => void
   onRestore: (id: string) => void
   onPermanentDelete: (id: string) => void
+  onPermanentDeleteAll: () => void
   onViewChange: (view: 'notes' | 'trash') => void
 }
 
@@ -36,7 +37,7 @@ function NoteRow({
 
   return (
     <div
-      className={`relative group w-full text-left border-b border-zinc-100 dark:border-zinc-800 transition-colors ${
+      className={`relative w-full border-b border-zinc-100 dark:border-zinc-800 transition-colors ${
         selected ? 'bg-zinc-200 dark:bg-zinc-700' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'
       }`}
       onMouseEnter={() => setHovered(true)}
@@ -75,21 +76,21 @@ function DeletedNoteRow({
   onPermanentDelete: () => void
 }) {
   return (
-    <div className="w-full text-left px-4 py-3 border-b border-zinc-100 dark:border-zinc-800 group">
-      <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 truncate">
+    <div className="w-full px-4 py-2.5 border-b border-zinc-100 dark:border-zinc-800">
+      <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 truncate">
         {note.title || 'Untitled'}
       </p>
-      <div className="flex items-center gap-2 mt-1">
+      <div className="flex items-center gap-2 mt-0.5">
         <button
           onClick={onRestore}
-          className="text-xs text-blue-500 hover:text-blue-600 dark:hover:text-blue-400"
+          className="text-xs text-zinc-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
         >
           Restore
         </button>
-        <span className="text-zinc-300 dark:text-zinc-600">·</span>
+        <span className="text-zinc-300 dark:text-zinc-600 text-xs">·</span>
         <button
           onClick={onPermanentDelete}
-          className="text-xs text-red-400 hover:text-red-500"
+          className="text-xs text-zinc-400 hover:text-red-500 transition-colors"
         >
           Delete
         </button>
@@ -108,42 +109,33 @@ export function NoteList({
   onDelete,
   onRestore,
   onPermanentDelete,
+  onPermanentDeleteAll,
   onViewChange,
 }: Props) {
   return (
     <div className="flex flex-col h-full w-64 border-r border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 flex-shrink-0">
       <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-200 dark:border-zinc-800">
-        <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Notes</span>
-        <button
-          onClick={onNew}
-          className="text-xl leading-none text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
-          aria-label="New note"
-        >
-          +
-        </button>
-      </div>
-
-      <div className="flex border-b border-zinc-200 dark:border-zinc-800">
-        <button
-          onClick={() => onViewChange('notes')}
-          className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
-            view === 'notes'
-              ? 'text-zinc-900 dark:text-zinc-100 border-b-2 border-zinc-700 dark:border-zinc-300'
-              : 'text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'
-          }`}
-        >
-          Notes
-        </button>
-        <button
-          onClick={() => onViewChange('trash')}
-          className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
-            view === 'trash'
-              ? 'text-zinc-900 dark:text-zinc-100 border-b-2 border-zinc-700 dark:border-zinc-300'
-              : 'text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'
-          }`}
-        >
-          Recently Deleted {deletedNotes.length > 0 && `(${deletedNotes.length})`}
-        </button>
+        <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+          {view === 'trash' ? 'Recently Deleted' : 'Notes'}
+        </span>
+        <div className="flex items-center gap-2">
+          {view === 'trash' ? (
+            <button
+              onClick={() => onViewChange('notes')}
+              className="text-xs text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+            >
+              Done
+            </button>
+          ) : (
+            <button
+              onClick={onNew}
+              className="text-xl leading-none text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+              aria-label="New note"
+            >
+              +
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -179,6 +171,28 @@ export function NoteList({
           </>
         )}
       </div>
+
+      {view === 'notes' && deletedNotes.length > 0 && (
+        <div className="border-t border-zinc-200 dark:border-zinc-800 px-4 py-2 flex items-center justify-between">
+          <button
+            onClick={() => onViewChange('trash')}
+            className="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+          >
+            Recently Deleted ({deletedNotes.length})
+          </button>
+        </div>
+      )}
+
+      {view === 'trash' && deletedNotes.length > 0 && (
+        <div className="border-t border-zinc-200 dark:border-zinc-800 px-4 py-2">
+          <button
+            onClick={onPermanentDeleteAll}
+            className="text-xs text-red-400 hover:text-red-500 transition-colors"
+          >
+            Delete All
+          </button>
+        </div>
+      )}
     </div>
   )
 }

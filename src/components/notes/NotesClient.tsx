@@ -77,6 +77,13 @@ export function NotesClient({ initialNotes, initialDeletedNotes }: Props) {
     setDeletedNotes((prev) => prev.filter((n) => n.id !== id))
   }, [])
 
+  const handlePermanentDeleteAll = useCallback(async () => {
+    await Promise.all(
+      deletedNotes.map((n) => fetch(`/api/notes/${n.id}?permanent=true`, { method: 'DELETE' })),
+    )
+    setDeletedNotes([])
+  }, [deletedNotes])
+
   useEffect(() => {
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current)
@@ -95,6 +102,7 @@ export function NotesClient({ initialNotes, initialDeletedNotes }: Props) {
         onDelete={handleDelete}
         onRestore={handleRestore}
         onPermanentDelete={handlePermanentDelete}
+        onPermanentDeleteAll={handlePermanentDeleteAll}
         onViewChange={setView}
       />
       <div className="flex-1 overflow-hidden flex flex-col">
