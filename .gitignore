@@ -46,3 +46,6 @@ next-env.d.ts
 prisma/*.db
 prisma/*.db-journal
 
+# Electron build output
+dist/
+prisma/prod.db
