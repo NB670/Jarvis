@@ -22,7 +22,7 @@ mac:
   target:
     - target: dmg
       arch:
-        - universal
+        - arm64
   minimumSystemVersion: "13.0"
   icon: electron/assets/icon.icns
 
