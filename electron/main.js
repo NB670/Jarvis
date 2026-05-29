@@ -127,8 +127,8 @@ app.whenReady().then(async () => {
     await waitForServer(port)
     createWindow(port)
   } else {
-    // Dev: next dev is already running (started by concurrently + wait-on in electron:dev)
-    createWindow(3000)
+    // Dev: next dev is already running on port 3737 (started by concurrently + wait-on in electron:dev)
+    createWindow(3737)
   }
 })
 
