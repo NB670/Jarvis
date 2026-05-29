@@ -1,4 +1,5 @@
 import { deleteNote, getNote, softDeleteNote, updateNote } from '@/lib/db'
+import { updateMemoryFromNote } from '@/lib/jarvis/memory-service'
 import { NextResponse } from 'next/server'
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -16,6 +17,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   }
   try {
     const note = await updateNote(id, body.content)
+    // Fire-and-forget: extract memory items from note content
+    updateMemoryFromNote(note.title, note.content).catch(() => {})
     return NextResponse.json(note)
   } catch {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
