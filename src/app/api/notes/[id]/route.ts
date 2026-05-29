@@ -1,4 +1,4 @@
-import { deleteNote, getNote, updateNote } from '@/lib/db'
+import { deleteNote, getNote, softDeleteNote, updateNote } from '@/lib/db'
 import { NextResponse } from 'next/server'
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -22,10 +22,16 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   }
 }
 
-export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  const { searchParams } = new URL(req.url)
+  const permanent = searchParams.get('permanent') === 'true'
   try {
-    await deleteNote(id)
+    if (permanent) {
+      await deleteNote(id)
+    } else {
+      await softDeleteNote(id)
+    }
     return new NextResponse(null, { status: 204 })
   } catch {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })

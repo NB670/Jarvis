@@ -1,7 +1,12 @@
-import { createNote, listNotes } from '@/lib/db'
+import { createNote, listDeletedNotes, listNotes } from '@/lib/db'
 import { NextResponse } from 'next/server'
 
-export async function GET() {
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url)
+  if (searchParams.get('deleted') === 'true') {
+    const notes = await listDeletedNotes()
+    return NextResponse.json(notes)
+  }
   const notes = await listNotes()
   return NextResponse.json(notes)
 }

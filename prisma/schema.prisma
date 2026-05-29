@@ -14,13 +14,15 @@ enum ChatRole {
 }
 
 model Note {
-  id        String   @id @default(cuid())
-  title     String   @default("")
-  content   String   @default("")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id        String    @id @default(cuid())
+  title     String    @default("")
+  content   String    @default("")
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   @@index([updatedAt])
+  @@index([deletedAt])
 }
 
 model JarvisMemory {

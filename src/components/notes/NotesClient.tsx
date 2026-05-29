@@ -7,11 +7,14 @@ import { NoteList } from './NoteList'
 
 interface Props {
   initialNotes: Note[]
+  initialDeletedNotes: Note[]
 }
 
-export function NotesClient({ initialNotes }: Props) {
+export function NotesClient({ initialNotes, initialDeletedNotes }: Props) {
   const [notes, setNotes] = useState<Note[]>(initialNotes)
+  const [deletedNotes, setDeletedNotes] = useState<Note[]>(initialDeletedNotes)
   const [selectedId, setSelectedId] = useState<string | null>(initialNotes[0]?.id ?? null)
+  const [view, setView] = useState<'notes' | 'trash'>('notes')
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const selectedNote = notes.find((n) => n.id === selectedId) ?? null
@@ -25,6 +28,7 @@ export function NotesClient({ initialNotes }: Props) {
     const note = (await res.json()) as Note
     setNotes((prev) => [note, ...prev])
     setSelectedId(note.id)
+    setView('notes')
   }, [])
 
   const handleSelect = useCallback((id: string) => {
@@ -53,6 +57,26 @@ export function NotesClient({ initialNotes }: Props) {
     [selectedId],
   )
 
+  const handleDelete = useCallback(async (id: string) => {
+    await fetch(`/api/notes/${id}`, { method: 'DELETE' })
+    setNotes((prev) => prev.filter((n) => n.id !== id))
+    const res = await fetch('/api/notes?deleted=true')
+    setDeletedNotes(await res.json())
+    setSelectedId((prev) => (prev === id ? null : prev))
+  }, [])
+
+  const handleRestore = useCallback(async (id: string) => {
+    const res = await fetch(`/api/notes/${id}/restore`, { method: 'POST' })
+    const restored = (await res.json()) as Note
+    setDeletedNotes((prev) => prev.filter((n) => n.id !== id))
+    setNotes((prev) => [restored, ...prev])
+  }, [])
+
+  const handlePermanentDelete = useCallback(async (id: string) => {
+    await fetch(`/api/notes/${id}?permanent=true`, { method: 'DELETE' })
+    setDeletedNotes((prev) => prev.filter((n) => n.id !== id))
+  }, [])
+
   useEffect(() => {
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current)
@@ -63,12 +87,22 @@ export function NotesClient({ initialNotes }: Props) {
     <div className="flex h-screen bg-white dark:bg-zinc-950">
       <NoteList
         notes={notes}
+        deletedNotes={deletedNotes}
         selectedId={selectedId}
+        view={view}
         onSelect={handleSelect}
         onNew={handleNew}
+        onDelete={handleDelete}
+        onRestore={handleRestore}
+        onPermanentDelete={handlePermanentDelete}
+        onViewChange={setView}
       />
       <div className="flex-1 overflow-hidden flex flex-col">
-        {selectedNote ? (
+        {view === 'trash' ? (
+          <div className="flex-1 flex items-center justify-center text-zinc-400 text-sm">
+            Recently deleted notes are shown in the sidebar
+          </div>
+        ) : selectedNote ? (
           <NoteEditor
             key={selectedNote.id}
             content={selectedNote.content}
