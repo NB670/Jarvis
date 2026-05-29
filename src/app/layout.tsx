@@ -1,34 +1,16 @@
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
+import type { Metadata } from 'next'
+import './globals.css'
 
-export const dynamic = "force-dynamic";
+export const metadata: Metadata = {
+  title: 'Jarvis',
+}
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-export const metadata = {
-  title: "Jarvis",
-  description: "Personal planning assistant — goals, tasks, reflections, and Jarvis chat.",
-};
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="en">
+      <body className="bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-50 antialiased">
+        {children}
+      </body>
     </html>
-  );
+  )
 }

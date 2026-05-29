@@ -1,98 +1,47 @@
-import {
-  GoalPriority,
-  GoalStatus,
-  GoalType,
-  PrismaClient,
-  TaskEffort,
-  TaskStatus,
-  TaskUrgency,
-} from "@prisma/client";
+import { PrismaClient } from "@prisma/client"
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient()
 
 async function main() {
-  await prisma.suggestedUpdate.deleteMany();
-  await prisma.chatMessage.deleteMany();
-  await prisma.reflection.deleteMany();
-  await prisma.task.deleteMany();
-  await prisma.goal.deleteMany();
-  await prisma.appState.deleteMany();
+  await prisma.chatMessage.deleteMany()
+  await prisma.note.deleteMany()
+  await prisma.jarvisMemory.deleteMany()
 
-  await prisma.appState.create({
-    data: { id: "default", primaryFocus: "Ship Jarvis MVP" },
-  });
-
-  const longTerm = await prisma.goal.create({
-    data: {
-      title: "Build the ultimate personal assistant",
-      description: "A voice-first Jarvis that orchestrates life planning, execution, and reflection.",
-      type: GoalType.long_term,
-      priority: GoalPriority.high,
-      status: GoalStatus.active,
-      whyItMatters: "Compound clarity and execution over years—not just task lists.",
-    },
-  });
-
-  const shortTerm = await prisma.goal.create({
-    data: {
-      title: "Build Jarvis MVP",
-      description: "Web dashboard, structured memory, chat, and approval-based updates.",
-      type: GoalType.short_term,
-      priority: GoalPriority.high,
-      status: GoalStatus.active,
-      whyItMatters: "Prove the planning loop before investing in voice and integrations.",
-    },
-  });
-
-  await prisma.task.createMany({
+  await prisma.note.createMany({
     data: [
       {
-        title: "Create dashboard UI",
-        description: "Cards for focus, goals, tasks, reflections, pending suggestions.",
-        goalId: shortTerm.id,
-        status: TaskStatus.in_progress,
-        urgency: TaskUrgency.high,
-        effort: TaskEffort.medium,
-        nextAction: "Wire dashboard to live Prisma queries",
+        title: "Welcome to Jarvis",
+        content: "This is your personal notes and planning assistant.",
       },
       {
-        title: "Implement goals/tasks database",
-        description: "Prisma models, migrations, seed, CRUD helpers.",
-        goalId: shortTerm.id,
-        status: TaskStatus.todo,
-        urgency: TaskUrgency.high,
-        effort: TaskEffort.medium,
-        nextAction: "Run migrate and verify CRUD forms",
-      },
-      {
-        title: "Build chat testing interface",
-        description: "Chat page, context builder, LLM integration, suggestion records.",
-        goalId: shortTerm.id,
-        status: TaskStatus.todo,
-        urgency: TaskUrgency.medium,
-        effort: TaskEffort.large,
-        nextAction: "Implement /api/chat with structured JSON follow-up",
+        title: "Goals for Jarvis MVP",
+        content:
+          "Build the Notes PWA and Jarvis chat PWA. Keep the stack simple: Next.js, Prisma, SQLite.",
       },
     ],
-  });
+  })
 
-  await prisma.reflection.create({
+  await prisma.jarvisMemory.create({
     data: {
-      content:
-        "The final product should be voice-first, but chat is useful for testing.",
-      relatedGoalId: longTerm.id,
+      id: "default",
+      data: {
+        name: "Neel",
+        preferences: [],
+        goals: [],
+        facts: [],
+      },
     },
-  });
+  })
 
-  console.log("Seed complete.");
+  console.log("Seed complete.")
 }
 
 main()
   .then(async () => {
-    await prisma.$disconnect();
+    await prisma.$disconnect()
   })
   .catch(async (e) => {
-    console.error(e);
-    await prisma.$disconnect();
-    process.exit(1);
-  });
+    console.error(e)
+    await prisma.$disconnect()
+    process.exit(1)
+  })
