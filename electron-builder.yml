@@ -1,0 +1,37 @@
+appId: com.jarvis.notes
+productName: Notes
+copyright: "Copyright © 2026"
+
+asar: false
+
+directories:
+  output: dist
+
+files:
+  - "electron/**"
+  - ".next/standalone/**"
+  - "!**/.git/**"
+  - "!**/node_modules/.cache/**"
+
+extraResources:
+  - from: "prisma/prod.db"
+    to: "prod.db"
+
+mac:
+  category: public.app-category.productivity
+  target:
+    - target: dmg
+      arch:
+        - universal
+  minimumSystemVersion: "13.0"
+  icon: electron/assets/icon.icns
+
+dmg:
+  title: "Notes"
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
