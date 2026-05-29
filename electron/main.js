@@ -78,7 +78,7 @@ function waitForServer(port, retries = 60) {
   return new Promise((resolve, reject) => {
     function attempt(n) {
       if (n === 0) return reject(new Error(`Next.js server did not start on port ${port}`))
-      const req = http.get(`http://127.0.0.1:${port}`, () => resolve())
+      const req = http.get(`http://localhost:${port}`, () => resolve())
       req.on('error', () => setTimeout(() => attempt(n - 1), 500))
       req.end()
     }
@@ -108,7 +108,7 @@ function createWindow(port) {
     },
   })
 
-  mainWindow.loadURL(`http://127.0.0.1:${port}/notes`)
+  mainWindow.loadURL(`http://localhost:${port}/notes`)
 
   mainWindow.on('close', () => {
     if (mainWindow) store.set('bounds', mainWindow.getBounds())
