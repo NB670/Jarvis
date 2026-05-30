@@ -44,10 +44,9 @@ function findFreePort(start) {
 // ── Database (production only) ─────────────────────────────────────────────
 
 function applyMigrations(dbPath) {
+  const { DatabaseSync } = require('node:sqlite')
+  const db = new DatabaseSync(dbPath)
   try {
-    const { DatabaseSync } = require('node:sqlite')
-    const db = new DatabaseSync(dbPath)
-
     const cols = db.prepare('PRAGMA table_info(Note)').all()
     if (!cols.find((c) => c.name === 'deletedAt')) {
       db.exec('ALTER TABLE "Note" ADD COLUMN "deletedAt" DATETIME')
@@ -71,10 +70,11 @@ function applyMigrations(dbPath) {
         CREATE INDEX "DailyTask_date_idx" ON "DailyTask"("date");
       `)
     }
-
-    db.close()
   } catch (e) {
     console.error('Migration error:', e)
+    throw e
+  } finally {
+    db.close()
   }
 }
 
@@ -90,7 +90,12 @@ function ensureDatabase() {
     }
   }
 
-  applyMigrations(dbPath)
+  try {
+    applyMigrations(dbPath)
+  } catch (e) {
+    app.quit()
+    return
+  }
   process.env.DATABASE_URL = `file:${dbPath}`
 }
 
