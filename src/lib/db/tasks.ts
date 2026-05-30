@@ -1,3 +1,4 @@
+import type { DailyTask } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 
 interface CreateTaskInput {
@@ -37,15 +38,16 @@ export async function deleteDailyTask(id: string) {
 export async function replaceDailyTasksForDate(
   date: string,
   tasks: Omit<CreateTaskInput, 'calendarEventId'>[],
-): Promise<{ deletedCalendarEventIds: string[]; created: Awaited<ReturnType<typeof prisma.dailyTask.findMany>> }> {
+): Promise<{ deletedCalendarEventIds: string[]; created: DailyTask[] }> {
   const existing = await prisma.dailyTask.findMany({ where: { date } })
   const deletedCalendarEventIds = existing
     .map((t) => t.calendarEventId)
     .filter((id): id is string => id !== null)
 
-  await prisma.dailyTask.deleteMany({ where: { date } })
-
-  const created = await Promise.all(tasks.map((t) => prisma.dailyTask.create({ data: { ...t, date } })))
+  const created = await prisma.$transaction(async (tx) => {
+    await tx.dailyTask.deleteMany({ where: { date } })
+    return Promise.all(tasks.map((t) => tx.dailyTask.create({ data: { ...t, date } })))
+  })
 
   return { deletedCalendarEventIds, created }
 }
