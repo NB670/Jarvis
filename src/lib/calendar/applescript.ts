@@ -7,7 +7,12 @@ function runScript(script: string): string {
 }
 
 function esc(s: string): string {
-  return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+  return s
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\r/g, '')
+    .replace(/\n/g, ' ')
+    .replace(/\t/g, ' ')
 }
 
 export function createCalendarEvent(
