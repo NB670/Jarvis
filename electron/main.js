@@ -54,6 +54,24 @@ function applyMigrations(dbPath) {
       db.exec('CREATE INDEX IF NOT EXISTS "Note_deletedAt_idx" ON "Note"("deletedAt")')
     }
 
+    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='DailyTask'").all()
+    if (tables.length === 0) {
+      db.exec(`
+        CREATE TABLE "DailyTask" (
+          "id" TEXT NOT NULL PRIMARY KEY,
+          "date" TEXT NOT NULL,
+          "rawInput" TEXT NOT NULL,
+          "title" TEXT NOT NULL,
+          "startAt" TEXT,
+          "durationMinutes" INTEGER NOT NULL DEFAULT 30,
+          "completedAt" DATETIME,
+          "calendarEventId" TEXT,
+          "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX "DailyTask_date_idx" ON "DailyTask"("date");
+      `)
+    }
+
     db.close()
   } catch (e) {
     console.error('Migration error:', e)

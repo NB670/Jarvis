@@ -50,3 +50,17 @@ model CalendarEvent {
 
   @@index([startAt])
 }
+
+model DailyTask {
+  id              String    @id @default(cuid())
+  date            String
+  rawInput        String
+  title           String
+  startAt         String?
+  durationMinutes Int       @default(30)
+  completedAt     DateTime?
+  calendarEventId String?
+  createdAt       DateTime  @default(now())
+
+  @@index([date])
+}
