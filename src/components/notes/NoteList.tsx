@@ -7,14 +7,14 @@ interface Props {
   notes: Note[]
   deletedNotes: Note[]
   selectedId: string | null
-  view: 'notes' | 'trash'
+  view: 'notes' | 'trash' | 'today'
   onSelect: (id: string) => void
   onNew: () => void
   onDelete: (id: string) => void
   onRestore: (id: string) => void
   onPermanentDelete: (id: string) => void
   onPermanentDeleteAll: () => void
-  onViewChange: (view: 'notes' | 'trash') => void
+  onViewChange: (view: 'notes' | 'trash' | 'today') => void
 }
 
 function preview(content: string) {
@@ -112,8 +112,21 @@ export function NoteList({
   onPermanentDeleteAll,
   onViewChange,
 }: Props) {
+  const todayLabel = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+
   return (
     <div className="flex flex-col h-full w-64 border-r border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 flex-shrink-0">
+      <button
+        onClick={() => onViewChange('today')}
+        className={`w-full text-left px-4 py-2.5 border-b border-zinc-200 dark:border-zinc-800 flex items-center gap-2 transition-colors ${
+          view === 'today'
+            ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100'
+            : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100'
+        }`}
+      >
+        <span className="text-sm font-medium">Today</span>
+        <span className="text-xs text-zinc-400 dark:text-zinc-500">{todayLabel}</span>
+      </button>
       <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-200 dark:border-zinc-800">
         <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
           {view === 'trash' ? 'Recently Deleted' : 'Notes'}
@@ -139,7 +152,7 @@ export function NoteList({
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {view === 'notes' && (
+        {(view === 'notes' || view === 'today') && (
           <>
             {notes.length === 0 && (
               <p className="px-4 py-6 text-sm text-zinc-400">No notes yet. Hit + to create one.</p>
@@ -148,8 +161,11 @@ export function NoteList({
               <NoteRow
                 key={note.id}
                 note={note}
-                selected={note.id === selectedId}
-                onSelect={() => onSelect(note.id)}
+                selected={note.id === selectedId && view === 'notes'}
+                onSelect={() => {
+                  if (view === 'today') onViewChange('notes')
+                  onSelect(note.id)
+                }}
                 onDelete={() => onDelete(note.id)}
               />
             ))}

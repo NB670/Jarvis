@@ -4,6 +4,7 @@ import type { Note } from '@prisma/client'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { NoteEditor } from './NoteEditor'
 import { NoteList } from './NoteList'
+import { TodayPanel } from './TodayPanel'
 
 interface Props {
   initialNotes: Note[]
@@ -14,7 +15,7 @@ export function NotesClient({ initialNotes, initialDeletedNotes }: Props) {
   const [notes, setNotes] = useState<Note[]>(initialNotes)
   const [deletedNotes, setDeletedNotes] = useState<Note[]>(initialDeletedNotes)
   const [selectedId, setSelectedId] = useState<string | null>(initialNotes[0]?.id ?? null)
-  const [view, setView] = useState<'notes' | 'trash'>('notes')
+  const [view, setView] = useState<'notes' | 'trash' | 'today'>('notes')
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const selectedNote = notes.find((n) => n.id === selectedId) ?? null
@@ -106,7 +107,9 @@ export function NotesClient({ initialNotes, initialDeletedNotes }: Props) {
         onViewChange={setView}
       />
       <div className="flex-1 overflow-hidden flex flex-col">
-        {view === 'trash' ? (
+        {view === 'today' ? (
+          <TodayPanel />
+        ) : view === 'trash' ? (
           <div className="flex-1 flex items-center justify-center text-zinc-400 text-sm">
             Recently deleted notes are shown in the sidebar
           </div>
