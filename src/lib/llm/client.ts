@@ -55,12 +55,19 @@ async function tavilySearch(query: string): Promise<string> {
     .join('\n\n---\n\n')
 }
 
-export async function chat(messages: Message[]): Promise<string> {
+interface ChatOptions {
+  extraTools?: object[]
+  onExtraToolCall?: (name: string, args: unknown) => Promise<string>
+}
+
+export async function chat(messages: Message[], options: ChatOptions = {}): Promise<string> {
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) throw new LlmError('OPENAI_API_KEY is not set', 503)
 
   const base = (process.env.OPENAI_BASE_URL ?? 'https://api.openai.com/v1').replace(/\/$/, '')
   const model = process.env.OPENAI_MODEL ?? 'gpt-4o'
+
+  const allTools = [WEB_SEARCH_TOOL, ...(options.extraTools ?? [])]
 
   const callLlm = async (msgs: Message[]) => {
     const res = await fetch(`${base}/chat/completions`, {
@@ -69,7 +76,7 @@ export async function chat(messages: Message[]): Promise<string> {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({ model, temperature: 0.6, messages: msgs, tools: [WEB_SEARCH_TOOL] }),
+      body: JSON.stringify({ model, temperature: 0.6, messages: msgs, tools: allTools }),
     })
 
     if (!res.ok) {
@@ -90,20 +97,31 @@ export async function chat(messages: Message[]): Promise<string> {
   }
 
   let body = await callLlm(messages)
-  const choice = body.choices[0]
+  let currentMessages = messages
 
-  if (choice.finish_reason === 'tool_calls' && choice.message.tool_calls?.length) {
-    const tc = choice.message.tool_calls[0]
-    const args = JSON.parse(tc.function.arguments) as { query: string }
-    const searchResult = await tavilySearch(args.query)
+  while (body.choices[0]?.finish_reason === 'tool_calls' && body.choices[0].message.tool_calls?.length) {
+    const choice = body.choices[0]
+    const tc = choice.message.tool_calls![0]
+    const toolName = tc.function.name
+    const toolArgs = JSON.parse(tc.function.arguments) as unknown
 
-    const extended: Message[] = [
-      ...messages,
+    let toolResult: string
+    if (toolName === 'web_search') {
+      const args = toolArgs as { query: string }
+      toolResult = await tavilySearch(args.query)
+    } else if (options.onExtraToolCall) {
+      toolResult = await options.onExtraToolCall(toolName, toolArgs)
+    } else {
+      toolResult = `Unknown tool: ${toolName}`
+    }
+
+    currentMessages = [
+      ...currentMessages,
       { role: 'assistant', content: choice.message.content ?? '', tool_calls: choice.message.tool_calls },
-      { role: 'tool', content: searchResult, tool_call_id: tc.id },
+      { role: 'tool', content: toolResult, tool_call_id: tc.id },
     ]
 
-    body = await callLlm(extended)
+    body = await callLlm(currentMessages)
   }
 
   const text = body.choices[0]?.message?.content
