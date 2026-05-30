@@ -77,7 +77,7 @@ export function TodayPanel() {
   const inputRef = useRef<HTMLInputElement>(null)
 
   const fetchTasks = useCallback(async () => {
-    const res = await fetch(`/api/tasks?date=${today}`)
+    const res = await fetch(`/api/tasks/sync?date=${today}`, { method: 'POST' })
     if (res.ok) setTasks(await res.json())
   }, [today])
 

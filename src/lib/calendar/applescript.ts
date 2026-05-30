@@ -69,6 +69,64 @@ end tell`
   }
 }
 
+export interface CalendarEventData {
+  uid: string
+  title: string
+  startAt: string | null  // "HH:MM" or null for all-day
+  durationMinutes: number
+}
+
+export function listCalendarEventsForDate(date: string): CalendarEventData[] {
+  try {
+    const [year, month, day] = date.split('-').map(Number)
+    const script = `
+tell application "Calendar"
+  tell calendar "Jarvis"
+    set startBound to current date
+    set year of startBound to ${year}
+    set month of startBound to ${month}
+    set day of startBound to ${day}
+    set time of startBound to 0
+    set endBound to startBound + 86400
+    set evList to (every event whose start date >= startBound and start date < endBound)
+    set output to ""
+    repeat with ev in evList
+      set evUID to uid of ev
+      set evSummary to summary of ev
+      set evStart to start date of ev
+      set evEnd to end date of ev
+      set isAllDay to allday event of ev
+      if isAllDay then
+        set startHH to -1
+        set startMM to -1
+      else
+        set startHH to hours of evStart
+        set startMM to minutes of evStart
+      end if
+      set durationSecs to (evEnd - evStart) as integer
+      set durationMins to (durationSecs div 60)
+      set output to output & evUID & "|" & evSummary & "|" & startHH & "|" & startMM & "|" & durationMins & "\\n"
+    end repeat
+    return output
+  end tell
+end tell`
+    const raw = runScript(script)
+    if (!raw) return []
+    return raw
+      .split('\n')
+      .filter(Boolean)
+      .map((line) => {
+        const [uid, title, hhStr, mmStr, durStr] = line.split('|')
+        const hh = parseInt(hhStr, 10)
+        const mm = parseInt(mmStr, 10)
+        const startAt = hh >= 0 ? `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}` : null
+        return { uid, title, startAt, durationMinutes: Math.max(1, parseInt(durStr, 10)) }
+      })
+  } catch {
+    return []
+  }
+}
+
 export function deleteCalendarEvent(uid: string): void {
   try {
     const script = `
