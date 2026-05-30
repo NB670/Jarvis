@@ -37,7 +37,7 @@ export async function deleteDailyTask(id: string) {
 
 export async function replaceDailyTasksForDate(
   date: string,
-  tasks: Omit<CreateTaskInput, 'calendarEventId'>[],
+  tasks: Omit<CreateTaskInput, 'calendarEventId' | 'date'>[],
 ): Promise<{ deletedCalendarEventIds: string[]; created: DailyTask[] }> {
   const existing = await prisma.dailyTask.findMany({ where: { date } })
   const deletedCalendarEventIds = existing
