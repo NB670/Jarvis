@@ -98,8 +98,13 @@ export async function chat(messages: Message[], options: ChatOptions = {}): Prom
 
   let body = await callLlm(messages)
   let currentMessages = messages
+  let iterations = 0
 
   while (body.choices[0]?.finish_reason === 'tool_calls' && body.choices[0].message.tool_calls?.length) {
+    if (iterations++ >= 10) {
+      throw new LlmError('Too many tool call rounds', 502)
+    }
+
     const choice = body.choices[0]
     const tc = choice.message.tool_calls![0]
     const toolName = tc.function.name
