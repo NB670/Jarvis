@@ -48,14 +48,18 @@ async function handleSetDailyTasks(args: SetDailyTasksArgs): Promise<string> {
 
   for (const uid of deletedCalendarEventIds) deleteCalendarEvent(uid)
 
-  await Promise.all(
+  await Promise.allSettled(
     created.map(async (task) => {
-      const eventId = createCalendarEvent(task.title, task.date, task.startAt, task.durationMinutes)
-      if (eventId) await updateDailyTask(task.id, { calendarEventId: eventId })
+      try {
+        const eventId = createCalendarEvent(task.title, task.date, task.startAt, task.durationMinutes)
+        if (eventId) await updateDailyTask(task.id, { calendarEventId: eventId })
+      } catch {
+        /* ignore */
+      }
     }),
   )
 
-  return `Scheduled ${tasks.length} task${tasks.length !== 1 ? 's' : ''} for ${date} and synced to Apple Calendar.`
+  return `Scheduled ${tasks.length} task${tasks.length !== 1 ? 's' : ''} for ${date}.`
 }
 
 export async function runJarvisChat(userText: string) {
