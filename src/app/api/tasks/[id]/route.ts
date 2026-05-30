@@ -1,5 +1,6 @@
 import { deleteDailyTask, updateDailyTask } from '@/lib/db'
 import { deleteCalendarEvent } from '@/lib/calendar/applescript'
+import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -25,7 +26,6 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   try {
-    const { prisma } = await import('@/lib/prisma')
     const task = await prisma.dailyTask.findUnique({ where: { id } })
     if (!task) return NextResponse.json({ error: 'Not found' }, { status: 404 })
     if (task.calendarEventId) deleteCalendarEvent(task.calendarEventId)
