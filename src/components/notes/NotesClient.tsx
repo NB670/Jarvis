@@ -18,24 +18,39 @@ export function NotesClient({ initialNotes, initialDeletedNotes }: Props) {
   const [view, setView] = useState<'notes' | 'trash' | 'today'>('notes')
   const [taskDate, setTaskDate] = useState(() => new Date().toISOString().slice(0, 10))
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const creatingNote = useRef(false)
 
   const selectedNote = notes.find((n) => n.id === selectedId) ?? null
 
+  const deleteEmptyNote = useCallback(async (id: string) => {
+    const note = notes.find((n) => n.id === id)
+    if (!note || note.content.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, '').trim()) return
+    await fetch(`/api/notes/${id}?permanent=true`, { method: 'DELETE' })
+    setNotes((prev) => prev.filter((n) => n.id !== id))
+  }, [notes])
+
   const handleNew = useCallback(async () => {
-    const res = await fetch('/api/notes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: '' }),
-    })
-    const note = (await res.json()) as Note
-    setNotes((prev) => [note, ...prev])
-    setSelectedId(note.id)
-    setView('notes')
+    if (creatingNote.current) return
+    creatingNote.current = true
+    try {
+      const res = await fetch('/api/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: '' }),
+      })
+      const note = (await res.json()) as Note
+      setNotes((prev) => [note, ...prev])
+      setSelectedId(note.id)
+      setView('notes')
+    } finally {
+      creatingNote.current = false
+    }
   }, [])
 
   const handleSelect = useCallback((id: string) => {
+    if (selectedId && selectedId !== id) deleteEmptyNote(selectedId)
     setSelectedId(id)
-  }, [])
+  }, [selectedId, deleteEmptyNote])
 
   const handleChange = useCallback(
     (html: string) => {
@@ -106,6 +121,7 @@ export function NotesClient({ initialNotes, initialDeletedNotes }: Props) {
         onPermanentDelete={handlePermanentDelete}
         onPermanentDeleteAll={handlePermanentDeleteAll}
         onViewChange={(v) => {
+          if (selectedId) deleteEmptyNote(selectedId)
           if (v === 'today') setTaskDate(new Date().toISOString().slice(0, 10))
           setView(v)
         }}

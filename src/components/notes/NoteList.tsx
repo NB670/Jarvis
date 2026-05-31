@@ -18,8 +18,11 @@ interface Props {
 }
 
 function preview(content: string) {
-  const lines = content.split('\n').filter((l) => l.trim())
-  return lines.slice(1, 3).join(' ').replace(/^#+\s*/, '').slice(0, 80) || 'No additional text'
+  const segments = content
+    .split(/<\/?(?:p|h[1-6]|li|div|br)[^>]*\/?>/i)
+    .map((s) => s.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim())
+    .filter(Boolean)
+  return segments.slice(1).join(' ').slice(0, 80) || 'No additional text'
 }
 
 function NoteRow({

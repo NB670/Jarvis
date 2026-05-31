@@ -36,11 +36,12 @@ function formatMemory(
         .join('\n')
     : '(none)'
 
-  const notesBlock = notes.length
-    ? notes
+  const notesWithContent = notes.filter((n) => stripHtml(n.content).trim())
+  const notesBlock = notesWithContent.length
+    ? notesWithContent
         .map((n) => {
           const plain = stripHtml(n.content).slice(0, 800)
-          return `### ${n.title}\n${plain}${plain.length === 800 ? '…' : ''}`
+          return `### ${n.title || 'Untitled'}\n${plain}${plain.length === 800 ? '…' : ''}`
         })
         .join('\n\n')
     : '(none)'
