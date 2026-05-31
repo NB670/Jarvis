@@ -89,6 +89,8 @@ export function TodayPanel({ date, onDateChange }: { date: string; onDateChange:
 
   useEffect(() => {
     fetchTasks()
+    const id = setInterval(fetchTasks, 30_000)
+    return () => clearInterval(id)
   }, [fetchTasks])
 
   const handleAdd = useCallback(async () => {

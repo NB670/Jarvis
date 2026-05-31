@@ -5,9 +5,13 @@ export class LlmError extends Error {
   }
 }
 
+export type ContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image_url'; image_url: { url: string } }
+
 interface Message {
   role: 'system' | 'user' | 'assistant' | 'tool'
-  content: string
+  content: string | ContentPart[]
   tool_call_id?: string
   tool_calls?: ToolCall[]
 }

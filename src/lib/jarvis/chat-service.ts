@@ -62,8 +62,14 @@ async function handleSetDailyTasks(args: SetDailyTasksArgs): Promise<string> {
   return `Scheduled ${tasks.length} task${tasks.length !== 1 ? 's' : ''} for ${date}.`
 }
 
-export async function runJarvisChat(userText: string) {
-  const ctx = await buildContext([{ role: 'user', content: userText }])
+export async function runJarvisChat(userText: string, imageDataUrls: string[] = []) {
+  const userContent = imageDataUrls.length
+    ? [
+        { type: 'text' as const, text: userText },
+        ...imageDataUrls.map((url) => ({ type: 'image_url' as const, image_url: { url } })),
+      ]
+    : userText
+  const ctx = await buildContext([{ role: 'user', content: userContent }])
 
   const reply = await chat(ctx.messages, {
     extraTools: [SET_DAILY_TASKS_TOOL],

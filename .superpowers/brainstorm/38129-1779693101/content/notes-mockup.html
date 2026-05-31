@@ -1,0 +1,65 @@
+<h2>Smart Notes — UI Direction</h2>
+<p class="subtitle">Which feel is closer to what you have in mind?</p>
+
+<div class="options" style="margin-top: 20px;">
+
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Apple Notes style</h3>
+      <p>Note list on left, editor on right. Clean white/off-white. Inline checklist blocks, free text, no formatting toolbar.</p>
+      <div style="margin-top: 12px; background: #fafaf9; border-radius: 8px; overflow: hidden; border: 1px solid #e5e5e5; display: flex; height: 200px;">
+        <!-- Sidebar -->
+        <div style="width: 160px; background: #f5f5f4; border-right: 1px solid #e5e5e5; padding: 8px 0; overflow: hidden;">
+          <div style="padding: 6px 12px; font-size: 10px; font-weight: 600; color: #78716c; text-transform: uppercase; letter-spacing: 0.06em;">Notes</div>
+          <div style="background: #e7e5e4; border-radius: 6px; margin: 2px 6px; padding: 8px 8px;">
+            <div style="font-size: 11px; font-weight: 600; color: #1c1917;">2026 Goals</div>
+            <div style="font-size: 10px; color: #78716c; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Spanish, guitar, fitness...</div>
+          </div>
+          <div style="margin: 2px 6px; padding: 8px 8px; border-radius: 6px;">
+            <div style="font-size: 11px; font-weight: 600; color: #1c1917;">Jarvis MVP plan</div>
+            <div style="font-size: 10px; color: #78716c; margin-top: 2px;">Ship by end of June</div>
+          </div>
+          <div style="margin: 2px 6px; padding: 8px 8px; border-radius: 6px;">
+            <div style="font-size: 11px; font-weight: 600; color: #1c1917;">Weekly review</div>
+            <div style="font-size: 10px; color: #78716c; margin-top: 2px;">Sun May 18 — good week...</div>
+          </div>
+        </div>
+        <!-- Editor -->
+        <div style="flex: 1; padding: 14px 16px; overflow: hidden;">
+          <div style="font-size: 14px; font-weight: 700; color: #1c1917; margin-bottom: 10px;">2026 Goals</div>
+          <div style="font-size: 11px; color: #44403c; line-height: 1.7;">
+            <div>Learn Spanish — conversational by Dec</div>
+            <div style="margin-top: 6px; color: #78716c; font-size: 10px;">To do</div>
+            <div style="display: flex; align-items: center; gap: 6px; margin-top: 3px;"><span style="width: 12px; height: 12px; border: 1.5px solid #a8a29e; border-radius: 3px; display: inline-block; flex-shrink: 0;"></span><span>30 min Duolingo daily</span></div>
+            <div style="display: flex; align-items: center; gap: 6px; margin-top: 3px;"><span style="width: 12px; height: 12px; border: 1.5px solid #a8a29e; border-radius: 3px; display: inline-block; flex-shrink: 0; background: #a8a29e;"></span><span style="text-decoration: line-through; color: #a8a29e;">Find a tutor</span></div>
+            <div style="margin-top: 8px;">Guitar — 3 full songs by end of year</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Full-screen single note</h3>
+      <p>One note at a time, full focus. Swipe/click through notes. More like a journal or daily page. Minimal chrome.</p>
+      <div style="margin-top: 12px; background: #fafaf9; border-radius: 8px; overflow: hidden; border: 1px solid #e5e5e5; padding: 20px; height: 200px; box-sizing: border-box;">
+        <div style="font-size: 15px; font-weight: 700; color: #1c1917; margin-bottom: 4px;">2026 Goals</div>
+        <div style="font-size: 10px; color: #a8a29e; margin-bottom: 14px;">Last edited May 24</div>
+        <div style="font-size: 11px; color: #44403c; line-height: 1.8;">
+          <div>Learn Spanish — conversational by Dec</div>
+          <div style="display: flex; align-items: center; gap: 6px; margin-left: 12px;"><span style="width: 12px; height: 12px; border: 1.5px solid #a8a29e; border-radius: 3px; display: inline-block; flex-shrink: 0;"></span><span>30 min Duolingo daily</span></div>
+          <div style="display: flex; align-items: center; gap: 6px; margin-left: 12px; margin-top: 2px;"><span style="width: 12px; height: 12px; border: 1.5px solid #a8a29e; border-radius: 3px; display: inline-block; flex-shrink: 0; background: #a8a29e;"></span><span style="text-decoration: line-through; color: #a8a29e;">Find a tutor</span></div>
+          <div style="margin-top: 6px;">Guitar — 3 full songs by end of year</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div style="margin-top: 16px; padding: 12px 16px; background: #18181b; border-radius: 10px;">
+  <p style="font-size: 12px; color: #71717a; margin: 0;">Either way: free-form text, inline checklists, no heavy formatting. Jarvis can read every note and reference them in chat. You can also ask Jarvis to create or update a note for you.</p>
+</div>

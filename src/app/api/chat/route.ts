@@ -4,12 +4,13 @@ import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
   try {
-    const body = (await req.json()) as { message?: string };
+    const body = (await req.json()) as { message?: string; images?: string[] };
     const text = typeof body.message === "string" ? body.message.trim() : "";
+    const images = Array.isArray(body.images) ? (body.images as string[]) : [];
     if (!text) {
       return NextResponse.json({ error: "message is required" }, { status: 400 });
     }
-    const result = await runJarvisChat(text);
+    const result = await runJarvisChat(text, images);
     return NextResponse.json(result);
   } catch (e) {
     if (e instanceof LlmError) {
