@@ -2,6 +2,7 @@
 
 import type { Note } from '@prisma/client'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { MemoryView } from '@/components/jarvis/MemoryView'
 import { NoteEditor } from './NoteEditor'
 import { NoteList } from './NoteList'
 import { TodayPanel } from './TodayPanel'
@@ -15,7 +16,7 @@ export function NotesClient({ initialNotes, initialDeletedNotes }: Props) {
   const [notes, setNotes] = useState<Note[]>(initialNotes)
   const [deletedNotes, setDeletedNotes] = useState<Note[]>(initialDeletedNotes)
   const [selectedId, setSelectedId] = useState<string | null>(initialNotes[0]?.id ?? null)
-  const [view, setView] = useState<'notes' | 'trash' | 'today'>('notes')
+  const [view, setView] = useState<'notes' | 'trash' | 'today' | 'memory'>('notes')
   const [taskDate, setTaskDate] = useState(() => new Date().toISOString().slice(0, 10))
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const creatingNote = useRef(false)
@@ -129,6 +130,8 @@ export function NotesClient({ initialNotes, initialDeletedNotes }: Props) {
       <div className="flex-1 overflow-hidden flex flex-col">
         {view === 'today' ? (
           <TodayPanel date={taskDate} onDateChange={setTaskDate} />
+        ) : view === 'memory' ? (
+          <MemoryView />
         ) : view === 'trash' ? (
           <div className="flex-1 flex items-center justify-center text-zinc-400 text-sm">
             Recently deleted notes are shown in the sidebar
