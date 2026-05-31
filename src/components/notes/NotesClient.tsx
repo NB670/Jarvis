@@ -91,14 +91,15 @@ export function NotesClient({ initialNotes, initialDeletedNotes }: Props) {
 
       if (saveTimer.current) clearTimeout(saveTimer.current)
       saveTimer.current = setTimeout(async () => {
-        await fetch(`/api/notes/${selectedId}`, {
+        const res = await fetch(`/api/notes/${selectedId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ content: html }),
         })
-        const res = await fetch('/api/notes')
-        const updated = (await res.json()) as Note[]
-        setNotes(updated)
+        if (res.ok) {
+          const updated = (await res.json()) as Note
+          setNotes((prev) => prev.map((n) => (n.id === selectedId ? updated : n)))
+        }
       }, 800)
     },
     [selectedId],
