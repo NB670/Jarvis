@@ -111,6 +111,7 @@ function startServer(port) {
       ...process.env,
       PORT: String(port),
       HOSTNAME: '127.0.0.1',
+      DATABASE_URL: process.env.DATABASE_URL, // ensure standalone .env cannot override
     },
   })
 }
