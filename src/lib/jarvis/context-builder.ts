@@ -15,7 +15,7 @@ function formatMemory(
   mem: JarvisMemoryData,
   notes: { title: string; content: string }[],
   events: { title: string; startAt: Date }[],
-  tasks: DailyTask[],
+  tasksByDate: Map<string, DailyTask[]>,
   today: string,
 ): string {
   const goalsBlock = mem.goals.length
@@ -51,15 +51,27 @@ function formatMemory(
         .join('\n')
     : '(none)'
 
-  const tasksBlock = tasks.length
-    ? tasks
+  const dates = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today + 'T12:00:00')
+    d.setDate(d.getDate() + i)
+    return d.toISOString().slice(0, 10)
+  })
+
+  const tasksBlock = dates
+    .map((d) => {
+      const dayTasks = tasksByDate.get(d) ?? []
+      const label = d === today ? `${d} (today)` : d
+      if (!dayTasks.length) return `${label}: (none)`
+      const rows = dayTasks
         .map((t) => {
           const time = t.startAt ? `${t.startAt}: ` : ''
           const done = t.completedAt ? ' [✓]' : ''
-          return `- ${time}${t.title} (${t.durationMinutes}min)${done}`
+          return `  - ${time}${t.title} (${t.durationMinutes}min)${done}`
         })
         .join('\n')
-    : '(none scheduled)'
+      return `${label}:\n${rows}`
+    })
+    .join('\n')
 
   return [
     'GOALS:',
@@ -78,22 +90,29 @@ function formatMemory(
     'UPCOMING CALENDAR (next 7 days):',
     calendarBlock,
     '',
-    `TODAY'S TASKS (${today}):`,
+    'SCHEDULED TASKS (next 7 days):',
     tasksBlock,
   ].join('\n')
 }
 
 export async function buildContext(extraMessages: ChatMessage[]) {
   const today = todayDate()
-  const [mem, notes, recentChat, events, tasks] = await Promise.all([
+  const dates = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today + 'T12:00:00')
+    d.setDate(d.getDate() + i)
+    return d.toISOString().slice(0, 10)
+  })
+
+  const [mem, notes, recentChat, events, ...taskArrays] = await Promise.all([
     getMemory(),
     listNotes(),
     getRecentChatMessages(20),
     getUpcomingCalendarEvents(7),
-    listDailyTasksForDate(today),
+    ...dates.map((d) => listDailyTasksForDate(d)),
   ])
 
-  const memoryText = formatMemory(mem, notes, events, tasks, today)
+  const tasksByDate = new Map(dates.map((d, i) => [d, taskArrays[i]]))
+  const memoryText = formatMemory(mem, notes, events, tasksByDate, today)
 
   const systemPrompt = `${jarvisChatSystemPrompt()}\n\nMEMORY_CONTEXT:\n${memoryText}`
 

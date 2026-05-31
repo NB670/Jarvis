@@ -69,7 +69,13 @@ function TaskRow({
   )
 }
 
-export function TodayPanel() {
+function addDays(date: string, n: number): string {
+  const d = new Date(date + 'T12:00:00')
+  d.setDate(d.getDate() + n)
+  return d.toISOString().slice(0, 10)
+}
+
+export function TodayPanel({ date, onDateChange }: { date: string; onDateChange: (d: string) => void }) {
   const [tasks, setTasks] = useState<DailyTask[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -77,9 +83,9 @@ export function TodayPanel() {
   const inputRef = useRef<HTMLInputElement>(null)
 
   const fetchTasks = useCallback(async () => {
-    const res = await fetch(`/api/tasks/sync?date=${today}`, { method: 'POST' })
+    const res = await fetch(`/api/tasks/sync?date=${date}`, { method: 'POST' })
     if (res.ok) setTasks(await res.json())
-  }, [today])
+  }, [date])
 
   useEffect(() => {
     fetchTasks()
@@ -94,7 +100,7 @@ export function TodayPanel() {
       const res = await fetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rawInput: raw, date: today }),
+        body: JSON.stringify({ rawInput: raw, date }),
       })
       if (res.ok) {
         const task = (await res.json()) as DailyTask
@@ -112,7 +118,7 @@ export function TodayPanel() {
       setLoading(false)
       inputRef.current?.focus()
     }
-  }, [input, today])
+  }, [input, date])
 
   const handleComplete = useCallback(async (id: string, completed: boolean) => {
     // Optimistic update
@@ -138,10 +144,38 @@ export function TodayPanel() {
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden h-full">
-      <div className="px-6 pt-6 pb-4 border-b border-zinc-100 dark:border-zinc-800 flex-shrink-0">
-        <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-          {formatDate(today)}
-        </h1>
+      <div className="px-4 pt-4 pb-3 border-b border-zinc-100 dark:border-zinc-800 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onDateChange(addDays(date, -1))}
+            className="w-7 h-7 flex items-center justify-center rounded text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+            title="Previous day"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M9 2L4 7L9 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+          <h1 className="flex-1 text-center text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+            {formatDate(date)}
+          </h1>
+          <button
+            onClick={() => onDateChange(addDays(date, 1))}
+            className="w-7 h-7 flex items-center justify-center rounded text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+            title="Next day"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M5 2L10 7L5 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        </div>
+        {date !== today && (
+          <button
+            onClick={() => onDateChange(today)}
+            className="mt-1 w-full text-center text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+          >
+            Jump to today
+          </button>
+        )}
       </div>
 
       <div className="px-4 py-3 border-b border-zinc-100 dark:border-zinc-800 flex-shrink-0">

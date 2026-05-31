@@ -16,6 +16,7 @@ export function NotesClient({ initialNotes, initialDeletedNotes }: Props) {
   const [deletedNotes, setDeletedNotes] = useState<Note[]>(initialDeletedNotes)
   const [selectedId, setSelectedId] = useState<string | null>(initialNotes[0]?.id ?? null)
   const [view, setView] = useState<'notes' | 'trash' | 'today'>('notes')
+  const [taskDate, setTaskDate] = useState(() => new Date().toISOString().slice(0, 10))
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const selectedNote = notes.find((n) => n.id === selectedId) ?? null
@@ -104,11 +105,14 @@ export function NotesClient({ initialNotes, initialDeletedNotes }: Props) {
         onRestore={handleRestore}
         onPermanentDelete={handlePermanentDelete}
         onPermanentDeleteAll={handlePermanentDeleteAll}
-        onViewChange={setView}
+        onViewChange={(v) => {
+          if (v === 'today') setTaskDate(new Date().toISOString().slice(0, 10))
+          setView(v)
+        }}
       />
       <div className="flex-1 overflow-hidden flex flex-col">
         {view === 'today' ? (
-          <TodayPanel />
+          <TodayPanel date={taskDate} onDateChange={setTaskDate} />
         ) : view === 'trash' ? (
           <div className="flex-1 flex items-center justify-center text-zinc-400 text-sm">
             Recently deleted notes are shown in the sidebar
