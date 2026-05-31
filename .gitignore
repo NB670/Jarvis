@@ -49,3 +49,9 @@ prisma/*.db-journal
 # Electron build output
 dist/
 prisma/prod.db
+
+# Internal tooling
+.superpowers/
+.claude/
+docs/superpowers/
+prisma/prisma/
