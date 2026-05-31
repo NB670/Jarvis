@@ -7,14 +7,14 @@ interface Props {
   notes: Note[]
   deletedNotes: Note[]
   selectedId: string | null
-  view: 'notes' | 'trash' | 'today' | 'memory'
+  view: 'notes' | 'trash' | 'today'
   onSelect: (id: string) => void
   onNew: () => void
   onDelete: (id: string) => void
   onRestore: (id: string) => void
   onPermanentDelete: (id: string) => void
   onPermanentDeleteAll: () => void
-  onViewChange: (view: 'notes' | 'trash' | 'today' | 'memory') => void
+  onViewChange: (view: 'notes' | 'trash' | 'today') => void
 }
 
 function preview(content: string) {
@@ -130,16 +130,7 @@ export function NoteList({
         <span className="text-sm font-medium">Today</span>
         <span className="text-xs text-zinc-400 dark:text-zinc-500">{todayLabel}</span>
       </button>
-      <button
-        onClick={() => onViewChange('memory')}
-        className={`w-full text-left px-4 py-2.5 border-b border-zinc-200 dark:border-zinc-800 flex items-center gap-2 transition-colors ${
-          view === 'memory'
-            ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100'
-            : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100'
-        }`}
-      >
-        <span className="text-sm font-medium">Memory</span>
-      </button>
+
       <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-200 dark:border-zinc-800">
         <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
           {view === 'trash' ? 'Recently Deleted' : 'Notes'}
