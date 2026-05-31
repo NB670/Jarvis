@@ -2,6 +2,8 @@ import { ChatClient } from "@/components/ChatClient"
 import { getRecentChatMessages } from "@/lib/db"
 import { ChatRole } from "@prisma/client"
 
+export const dynamic = 'force-dynamic'
+
 export default async function ChatPage() {
   const raw = await getRecentChatMessages(40)
 
