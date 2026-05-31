@@ -28,9 +28,7 @@ function TaskRow({
 
   return (
     <div
-      className={`flex items-center gap-3 px-4 py-2.5 border-b border-zinc-100 dark:border-zinc-800 group transition-colors ${
-        task.completedAt ? 'opacity-50' : ''
-      }`}
+      className="flex items-center gap-3 px-4 py-2.5 border-b border-zinc-100 dark:border-zinc-800 group transition-colors"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
@@ -42,8 +40,10 @@ function TaskRow({
       />
       <div className="flex-1 min-w-0">
         <span
-          className={`text-sm text-zinc-900 dark:text-zinc-100 ${
-            task.completedAt ? 'line-through' : ''
+          className={`text-sm ${
+            task.completedAt
+              ? 'line-through text-zinc-400 dark:text-zinc-500'
+              : 'text-zinc-900 dark:text-zinc-100'
           }`}
         >
           {task.title}
@@ -115,14 +115,20 @@ export function TodayPanel() {
   }, [input, today])
 
   const handleComplete = useCallback(async (id: string, completed: boolean) => {
+    // Optimistic update
     setTasks((prev) =>
       prev.map((t) => (t.id === id ? { ...t, completedAt: completed ? new Date() : null } : t)),
     )
-    await fetch(`/api/tasks/${id}`, {
+    const res = await fetch(`/api/tasks/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ completed }),
     })
+    // Sync state with server response to avoid race conditions
+    if (res.ok) {
+      const updated = await res.json()
+      setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)))
+    }
   }, [])
 
   const handleDelete = useCallback(async (id: string) => {
