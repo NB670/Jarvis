@@ -6,9 +6,26 @@ import { NoteEditor } from './NoteEditor'
 import { NoteList } from './NoteList'
 import { TodayPanel } from './TodayPanel'
 
+const DRAFT_ID = '__draft__'
+
 interface Props {
   initialNotes: Note[]
   initialDeletedNotes: Note[]
+}
+
+function makeDraft(): Note {
+  return {
+    id: DRAFT_ID,
+    title: '',
+    content: '',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    deletedAt: null,
+  }
+}
+
+function hasText(content: string) {
+  return content.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, '').trim().length > 0
 }
 
 export function NotesClient({ initialNotes, initialDeletedNotes }: Props) {
@@ -17,47 +34,60 @@ export function NotesClient({ initialNotes, initialDeletedNotes }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(initialNotes[0]?.id ?? null)
   const [view, setView] = useState<'notes' | 'trash' | 'today'>('notes')
   const [taskDate, setTaskDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [draft, setDraft] = useState<Note | null>(null)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const creatingNote = useRef(false)
 
-  const selectedNote = notes.find((n) => n.id === selectedId) ?? null
+  // All visible notes = draft (if active) + real notes
+  const displayNotes = draft ? [draft, ...notes] : notes
+  const selectedNote = draft?.id === selectedId ? draft : notes.find((n) => n.id === selectedId) ?? null
 
-  const deleteEmptyNote = useCallback(async (id: string) => {
-    const note = notes.find((n) => n.id === id)
-    if (!note || note.content.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, '').trim()) return
-    await fetch(`/api/notes/${id}?permanent=true`, { method: 'DELETE' })
-    setNotes((prev) => prev.filter((n) => n.id !== id))
-  }, [notes])
-
-  const handleNew = useCallback(async () => {
-    if (creatingNote.current) return
-    creatingNote.current = true
-    try {
-      const res = await fetch('/api/notes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: '' }),
-      })
-      const note = (await res.json()) as Note
-      setNotes((prev) => [note, ...prev])
-      setSelectedId(note.id)
-      setView('notes')
-    } finally {
-      creatingNote.current = false
-    }
+  const discardDraftIfEmpty = useCallback(() => {
+    setDraft((d) => (d && !hasText(d.content) ? null : d))
+    setSelectedId((id) => (id === DRAFT_ID ? null : id))
   }, [])
 
+  const handleNew = useCallback(() => {
+    if (selectedId === DRAFT_ID) return // already drafting
+    discardDraftIfEmpty()
+    const d = makeDraft()
+    setDraft(d)
+    setSelectedId(DRAFT_ID)
+    setView('notes')
+  }, [selectedId, discardDraftIfEmpty])
+
   const handleSelect = useCallback((id: string) => {
-    if (selectedId && selectedId !== id) deleteEmptyNote(selectedId)
+    discardDraftIfEmpty()
     setSelectedId(id)
-  }, [selectedId, deleteEmptyNote])
+  }, [discardDraftIfEmpty])
 
   const handleChange = useCallback(
-    (html: string) => {
+    async (html: string) => {
       if (!selectedId) return
-      setNotes((prev) =>
-        prev.map((n) => (n.id === selectedId ? { ...n, content: html } : n)),
-      )
+
+      if (selectedId === DRAFT_ID) {
+        // Update draft content locally
+        setDraft((d) => d ? { ...d, content: html } : null)
+
+        if (!hasText(html)) return // don't save empty drafts
+
+        // First real content — persist to DB
+        if (saveTimer.current) clearTimeout(saveTimer.current)
+        saveTimer.current = setTimeout(async () => {
+          const res = await fetch('/api/notes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: html }),
+          })
+          const note = (await res.json()) as Note
+          setDraft(null)
+          setNotes((prev) => [note, ...prev])
+          setSelectedId(note.id)
+        }, 800)
+        return
+      }
+
+      // Existing note — update in state and debounce save
+      setNotes((prev) => prev.map((n) => (n.id === selectedId ? { ...n, content: html } : n)))
 
       if (saveTimer.current) clearTimeout(saveTimer.current)
       saveTimer.current = setTimeout(async () => {
@@ -75,6 +105,11 @@ export function NotesClient({ initialNotes, initialDeletedNotes }: Props) {
   )
 
   const handleDelete = useCallback(async (id: string) => {
+    if (id === DRAFT_ID) {
+      setDraft(null)
+      setSelectedId(null)
+      return
+    }
     await fetch(`/api/notes/${id}`, { method: 'DELETE' })
     setNotes((prev) => prev.filter((n) => n.id !== id))
     const res = await fetch('/api/notes?deleted=true')
@@ -110,7 +145,7 @@ export function NotesClient({ initialNotes, initialDeletedNotes }: Props) {
   return (
     <div className="flex h-screen bg-white dark:bg-zinc-950">
       <NoteList
-        notes={notes}
+        notes={displayNotes}
         deletedNotes={deletedNotes}
         selectedId={selectedId}
         view={view}
@@ -121,7 +156,7 @@ export function NotesClient({ initialNotes, initialDeletedNotes }: Props) {
         onPermanentDelete={handlePermanentDelete}
         onPermanentDeleteAll={handlePermanentDeleteAll}
         onViewChange={(v) => {
-          if (selectedId) deleteEmptyNote(selectedId)
+          discardDraftIfEmpty()
           if (v === 'today') setTaskDate(new Date().toISOString().slice(0, 10))
           setView(v)
         }}
