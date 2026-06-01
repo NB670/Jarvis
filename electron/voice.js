@@ -63,7 +63,7 @@ async function speak(text, apiKey) {
   await new Promise((resolve, reject) => {
     const proc = spawn('afplay', [mp3])
     proc.on('close', () => { try { fs.unlinkSync(mp3) } catch {} resolve() })
-    proc.on('error', reject)
+    proc.on('error', (err) => { try { fs.unlinkSync(mp3) } catch {} reject(err) })
   })
 }
 
@@ -237,6 +237,7 @@ async function startSession() {
 }
 
 function endSession() {
+  if (!sessionActive && (!overlayWindow || overlayWindow.isDestroyed())) return
   sessionActive = false
   if (overlayWindow && !overlayWindow.isDestroyed()) {
     overlayWindow.close()
@@ -248,10 +249,11 @@ function endSession() {
 function startWakeWordLoop() {
   function tick() {
     if (!pvRecorder || !porcupine) return
+    if (sessionActive) { setImmediate(tick); return }
     try {
       const frame = pvRecorder.read()
       const idx = porcupine.process(frame)
-      if (idx >= 0 && !sessionActive) {
+      if (idx >= 0) {
         startSession().catch((e) => {
           console.error('[voice] Session error:', e.message)
           sessionActive = false
@@ -276,6 +278,7 @@ async function startVoiceEngine(port) {
     return
   }
 
+  ipcMain.removeAllListeners('voice:close')
   ipcMain.on('voice:close', () => endSession())
 
   try {
