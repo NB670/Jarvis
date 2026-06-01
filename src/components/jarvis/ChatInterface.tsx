@@ -88,10 +88,12 @@ function ThinkingDots() {
   )
 }
 
-export function ChatInterface() {
-  const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: "Hey, I'm Jarvis. What are you working on today?" },
-  ])
+export function ChatInterface({ initialMessages }: { initialMessages?: Message[] }) {
+  const [messages, setMessages] = useState<Message[]>(
+    initialMessages?.length
+      ? initialMessages
+      : [{ role: 'assistant', content: "Hey, I'm Jarvis. What are you working on today?" }],
+  )
   const [input, setInput] = useState('')
   const [images, setImages] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
