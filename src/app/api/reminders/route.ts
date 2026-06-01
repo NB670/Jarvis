@@ -1,10 +1,15 @@
-import { createReminderRecord, listUpcomingReminders } from '@/lib/db'
+import { createReminderRecord, listRemindersForToday, listUpcomingReminders } from '@/lib/db'
 import { createReminder } from '@/lib/macos'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url)
+  if (searchParams.get('today') === '1') {
+    const reminders = await listRemindersForToday()
+    return NextResponse.json(reminders)
+  }
   const reminders = await listUpcomingReminders()
   return NextResponse.json(reminders)
 }
