@@ -128,12 +128,14 @@ async function recordUntilSilence(pvRecorder) {
   return new Int16Array(allSamples)
 }
 
+const FRAME_LENGTH = 512  // ~32ms at 16kHz
+
 // ── Session ───────────────────────────────────────────────────────────────────
 
 let overlayWindow = null
 let sessionActive = false
 let appPort = null
-let porcupine = null
+let wakeProcess = null
 let pvRecorder = null
 
 function sendToOverlay(event, data) {
@@ -188,7 +190,7 @@ async function startSession() {
   createOverlay(appPort)
 
   // Drain a few frames to skip the wake word utterance
-  const drainFrames = Math.ceil(0.3 * 16000 / porcupine.frameLength)
+  const drainFrames = Math.ceil(0.3 * 16000 / FRAME_LENGTH)
   for (let i = 0; i < drainFrames; i++) pvRecorder.read()
 
   sendToOverlay('voice:state', { state: 'listening' })
@@ -244,27 +246,31 @@ function endSession() {
   }
 }
 
-// ── Wake word loop ────────────────────────────────────────────────────────────
+// ── Wake word process (OpenWakeWord via Python) ───────────────────────────────
 
-function startWakeWordLoop() {
-  function tick() {
-    if (!pvRecorder || !porcupine) return
-    if (sessionActive) { setImmediate(tick); return }
-    try {
-      const frame = pvRecorder.read()
-      const idx = porcupine.process(frame)
-      if (idx >= 0) {
-        startSession().catch((e) => {
-          console.error('[voice] Session error:', e.message)
-          sessionActive = false
-        })
-      }
-    } catch (e) {
-      console.error('[voice] Wake word loop error:', e.message)
+function startWakeWordProcess() {
+  const scriptPath = path.join(__dirname, 'wake_word.py')
+  wakeProcess = spawn('python3', [scriptPath])
+
+  wakeProcess.stdout.on('data', (data) => {
+    if (data.toString().includes('WAKE') && !sessionActive) {
+      startSession().catch((e) => {
+        console.error('[voice] Session error:', e.message)
+        sessionActive = false
+      })
     }
-    setImmediate(tick)
-  }
-  setImmediate(tick)
+  })
+
+  wakeProcess.stderr.on('data', (data) => {
+    process.stderr.write(data)
+  })
+
+  wakeProcess.on('exit', (code, signal) => {
+    wakeProcess = null
+    if (code !== 0 && signal !== 'SIGTERM') {
+      console.error(`[wake] Python process exited with code ${code}`)
+    }
+  })
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
@@ -272,33 +278,24 @@ function startWakeWordLoop() {
 async function startVoiceEngine(port) {
   appPort = port
 
-  const accessKey = process.env.PORCUPINE_ACCESS_KEY
-  if (!accessKey) {
-    console.log('[voice] PORCUPINE_ACCESS_KEY not set — voice disabled')
-    return
-  }
-
   ipcMain.removeAllListeners('voice:close')
   ipcMain.on('voice:close', () => endSession())
 
   try {
-    const { Porcupine, BuiltinKeyword } = require('@picovoice/porcupine-node')
     const { PvRecorder } = require('@picovoice/pvrecorder-node')
-
-    porcupine = new Porcupine(accessKey, [BuiltinKeyword.JARVIS], [0.5])
-    pvRecorder = new PvRecorder(porcupine.frameLength)
+    pvRecorder = new PvRecorder(FRAME_LENGTH)
     pvRecorder.start()
 
-    startWakeWordLoop()
-    console.log('[voice] Wake word listener started — say "Jarvis"')
+    startWakeWordProcess()
+    console.log("[voice] Wake word listener started — say 'Hey Jarvis'")
   } catch (e) {
     console.error('[voice] Failed to start voice engine:', e.message)
   }
 }
 
 function stopVoiceEngine() {
+  if (wakeProcess) { try { wakeProcess.kill() } catch {} wakeProcess = null }
   if (pvRecorder) { try { pvRecorder.stop() } catch {} pvRecorder = null }
-  if (porcupine) { try { porcupine.release() } catch {} porcupine = null }
   if (overlayWindow && !overlayWindow.isDestroyed()) overlayWindow.close()
 }
 
