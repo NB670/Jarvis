@@ -10,6 +10,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     title?: string
     startAt?: string | null
     durationMinutes?: number
+    type?: string
   }
 
   try {
@@ -20,9 +21,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       return NextResponse.json(task)
     }
     if (body.completed === false) {
+      const existing = await prisma.dailyTask.findUnique({ where: { id } })
       const task = await updateDailyTask(id, { completedAt: null })
-      // Recreate calendar event if the task has a time
-      if (!task.calendarEventId) {
+      if (existing?.type !== 'todo' && !task.calendarEventId) {
         try {
           const eventId = createCalendarEvent(task.title, task.date, task.startAt, task.durationMinutes)
           if (eventId) {
@@ -34,22 +35,30 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       return NextResponse.json(task)
     }
     // Field edits
-    const fields: Record<string, unknown> = {}
+    const fields: Partial<{ title: string; startAt: string | null; durationMinutes: number; type: string }> = {}
     if (typeof body.title === 'string') fields.title = body.title
     if ('startAt' in body) fields.startAt = body.startAt ?? null
     if (typeof body.durationMinutes === 'number') fields.durationMinutes = body.durationMinutes
+    if (body.type === 'block' || body.type === 'todo') fields.type = body.type
     if (Object.keys(fields).length > 0) {
       const existing = await prisma.dailyTask.findUnique({ where: { id } })
       const task = await updateDailyTask(id, fields)
-      // Sync calendar: delete old event and recreate with updated values
-      if (existing?.calendarEventId) deleteCalendarEvent(existing.calendarEventId)
-      try {
-        const eventId = createCalendarEvent(task.title, task.date, task.startAt, task.durationMinutes)
-        if (eventId) {
-          const updated = await updateDailyTask(id, { calendarEventId: eventId })
-          return NextResponse.json(updated)
+      const effectiveType = fields.type ?? existing?.type ?? 'block'
+      if (effectiveType === 'todo') {
+        if (existing?.calendarEventId) {
+          deleteCalendarEvent(existing.calendarEventId)
+          await updateDailyTask(id, { calendarEventId: null })
         }
-      } catch { /* calendar unavailable */ }
+      } else {
+        if (existing?.calendarEventId) deleteCalendarEvent(existing.calendarEventId)
+        try {
+          const eventId = createCalendarEvent(task.title, task.date, task.startAt, task.durationMinutes)
+          if (eventId) {
+            const updated = await updateDailyTask(id, { calendarEventId: eventId })
+            return NextResponse.json(updated)
+          }
+        } catch { /* calendar unavailable */ }
+      }
       return NextResponse.json(task)
     }
     return NextResponse.json({ error: 'no valid fields' }, { status: 400 })
