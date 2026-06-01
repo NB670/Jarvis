@@ -62,6 +62,7 @@ function applyMigrations(dbPath) {
           "date" TEXT NOT NULL,
           "rawInput" TEXT NOT NULL,
           "title" TEXT NOT NULL,
+          "type" TEXT NOT NULL DEFAULT 'block',
           "startAt" TEXT,
           "durationMinutes" INTEGER NOT NULL DEFAULT 30,
           "completedAt" DATETIME,
@@ -70,6 +71,11 @@ function applyMigrations(dbPath) {
         );
         CREATE INDEX "DailyTask_date_idx" ON "DailyTask"("date");
       `)
+    } else {
+      const taskCols = db.prepare('PRAGMA table_info(DailyTask)').all()
+      if (!taskCols.find((c) => c.name === 'type')) {
+        db.exec(`ALTER TABLE "DailyTask" ADD COLUMN "type" TEXT NOT NULL DEFAULT 'block'`)
+      }
     }
   } catch (e) {
     console.error('Migration error:', e)

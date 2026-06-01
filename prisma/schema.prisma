@@ -81,6 +81,7 @@ model DailyTask {
   date            String
   rawInput        String
   title           String
+  type            String    @default("block")
   startAt         String?
   durationMinutes Int       @default(30)
   completedAt     DateTime?

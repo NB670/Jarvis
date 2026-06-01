@@ -34,3 +34,15 @@ export async function deleteReminderRecord(id: string) {
 export async function getReminderById(id: string) {
   return prisma.reminder.findUnique({ where: { id } })
 }
+
+export async function listRemindersForToday() {
+  const endOfToday = new Date()
+  endOfToday.setHours(23, 59, 59, 999)
+  return prisma.reminder.findMany({
+    where: {
+      completedAt: null,
+      dueAt: { lte: endOfToday },
+    },
+    orderBy: { dueAt: 'asc' },
+  })
+}

@@ -5,6 +5,7 @@ interface CreateTaskInput {
   date: string
   rawInput: string
   title: string
+  type?: string
   startAt: string | null
   durationMinutes: number
   calendarEventId?: string | null
@@ -26,7 +27,14 @@ export async function listDailyTasksForDate(date: string) {
 
 export async function updateDailyTask(
   id: string,
-  data: Partial<{ completedAt: Date | null; calendarEventId: string | null }>,
+  data: Partial<{
+    completedAt: Date | null
+    calendarEventId: string | null
+    title: string
+    startAt: string | null
+    durationMinutes: number
+    type: string
+  }>,
 ) {
   return prisma.dailyTask.update({ where: { id }, data })
 }
