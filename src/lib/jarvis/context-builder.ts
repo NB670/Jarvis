@@ -96,7 +96,7 @@ function formatMemory(
   ].join('\n')
 }
 
-export async function buildContext(extraMessages: ChatMessage[]) {
+export async function buildContext(extraMessages: ChatMessage[], conversationId?: string) {
   const today = todayDate()
   const dates = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(today + 'T12:00:00')
@@ -107,7 +107,7 @@ export async function buildContext(extraMessages: ChatMessage[]) {
   const [mem, notes, recentChat, events, ...taskArrays] = await Promise.all([
     getMemory(),
     listNotes(),
-    getRecentChatMessages(20),
+    getRecentChatMessages(20, conversationId),
     getUpcomingCalendarEvents(7),
     ...dates.map((d) => listDailyTasksForDate(d)),
   ])

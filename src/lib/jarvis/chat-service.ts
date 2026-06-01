@@ -1,4 +1,4 @@
-import { appendChatMessages, replaceDailyTasksForDate, updateDailyTask } from '@/lib/db'
+import { appendChatMessages, createConversation, getRecentChatMessages, updateConversationTitle, replaceDailyTasksForDate, updateDailyTask } from '@/lib/db'
 import { createCalendarEvent, deleteCalendarEvent } from '@/lib/calendar/applescript'
 import { chat } from '@/lib/llm/client'
 import { buildContext } from './context-builder'
@@ -62,14 +62,21 @@ async function handleSetDailyTasks(args: SetDailyTasksArgs): Promise<string> {
   return `Scheduled ${tasks.length} task${tasks.length !== 1 ? 's' : ''} for ${date}.`
 }
 
-export async function runJarvisChat(userText: string, imageDataUrls: string[] = []) {
+export async function runJarvisChat(userText: string, imageDataUrls: string[] = [], conversationId?: string) {
+  // Create a new conversation if one wasn't provided
+  let convId = conversationId
+  if (!convId) {
+    const conv = await createConversation()
+    convId = conv.id
+  }
+
   const userContent = imageDataUrls.length
     ? [
         { type: 'text' as const, text: userText },
         ...imageDataUrls.map((url) => ({ type: 'image_url' as const, image_url: { url } })),
       ]
     : userText
-  const ctx = await buildContext([{ role: 'user', content: userContent }])
+  const ctx = await buildContext([{ role: 'user', content: userContent }], convId)
 
   const reply = await chat(ctx.messages, {
     extraTools: [SET_DAILY_TASKS_TOOL],
@@ -84,9 +91,22 @@ export async function runJarvisChat(userText: string, imageDataUrls: string[] = 
   await appendChatMessages([
     { role: 'user', content: userText },
     { role: 'assistant', content: reply },
-  ])
+  ], convId)
+
+  // Set title from first user message if this is a new conversation
+  if (!conversationId) {
+    const title = userText.slice(0, 60).trim()
+    updateConversationTitle(convId, title).catch(() => {})
+  } else {
+    // Check if this is the first message in the conversation
+    const existingMessages = await getRecentChatMessages(2, convId)
+    if (existingMessages.length <= 2) {
+      const title = userText.slice(0, 60).trim()
+      updateConversationTitle(convId, title).catch(() => {})
+    }
+  }
 
   updateMemoryAsync(ctx.memory, userText, reply)
 
-  return { message: reply }
+  return { message: reply, conversationId: convId }
 }
