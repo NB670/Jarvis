@@ -1,5 +1,5 @@
 import { deleteDailyTask, updateDailyTask } from '@/lib/db'
-import { createCalendarEvent, deleteCalendarEvent } from '@/lib/calendar/applescript'
+import { createCalendarEvent, deleteCalendarEvent } from '@/lib/macos'
 import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
 

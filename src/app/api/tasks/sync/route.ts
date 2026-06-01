@@ -1,5 +1,5 @@
 import { createDailyTask, listDailyTasksForDate } from '@/lib/db'
-import { listCalendarEventsForDate } from '@/lib/calendar/applescript'
+import { listCalendarEventsForDate } from '@/lib/macos'
 import { NextResponse } from 'next/server'
 
 export async function POST(req: Request) {

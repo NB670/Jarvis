@@ -1,5 +1,5 @@
 import { createDailyTask, listDailyTasksForDate, updateDailyTask } from '@/lib/db'
-import { createCalendarEvent } from '@/lib/calendar/applescript'
+import { createCalendarEvent } from '@/lib/macos'
 import { chatJson } from '@/lib/llm/client'
 import { parseTaskPrompt } from '@/lib/llm/prompts'
 import { NextResponse } from 'next/server'

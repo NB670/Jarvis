@@ -1,5 +1,5 @@
 import { createReminderRecord, listUpcomingReminders } from '@/lib/db'
-import { createReminder } from '@/lib/calendar/applescript'
+import { createReminder } from '@/lib/macos'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'

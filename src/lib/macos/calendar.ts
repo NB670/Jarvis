@@ -1,24 +1,9 @@
-import { spawnSync } from 'child_process'
-
-function runScript(script: string): string {
-  const result = spawnSync('osascript', ['-e', script], { encoding: 'utf8' })
-  if (result.error || result.status !== 0) return ''
-  return (result.stdout ?? '').toString().trim()
-}
-
-function esc(s: string): string {
-  return s
-    .replace(/\\/g, '\\\\')
-    .replace(/"/g, '\\"')
-    .replace(/\r/g, '')
-    .replace(/\n/g, ' ')
-    .replace(/\t/g, ' ')
-}
+import { esc, runScript } from './_utils'
 
 export function createCalendarEvent(
   title: string,
-  date: string,       // "YYYY-MM-DD"
-  startAt: string | null,   // "HH:MM" 24h, or null for all-day
+  date: string,
+  startAt: string | null,
   durationMinutes: number,
 ): string | null {
   try {
@@ -72,7 +57,7 @@ end tell`
 export interface CalendarEventData {
   uid: string
   title: string
-  startAt: string | null  // "HH:MM" or null for all-day
+  startAt: string | null
   durationMinutes: number
 }
 
@@ -127,78 +112,6 @@ end tell`
   }
 }
 
-export function createReminder(title: string, dueAt: Date, notes?: string): string | null {
-  try {
-    const month = dueAt.getMonth() + 1
-    const day = dueAt.getDate()
-    const year = dueAt.getFullYear()
-    const hours = dueAt.getHours()
-    const minutes = dueAt.getMinutes()
-    const seconds = dueAt.getSeconds()
-    const timeSeconds = hours * 3600 + minutes * 60 + seconds
-    const notesClause = notes ? `set body of newReminder to "${esc(notes)}"` : ''
-    const script = `
-tell application "Reminders"
-  if not (exists list "Jarvis") then
-    make new list with properties {name:"Jarvis"}
-  end if
-  tell list "Jarvis"
-    set newReminder to make new reminder with properties {name:"${esc(title)}"}
-    set due date of newReminder to current date
-    set year of (due date of newReminder) to ${year}
-    set month of (due date of newReminder) to ${month}
-    set day of (due date of newReminder) to ${day}
-    set time of (due date of newReminder) to ${timeSeconds}
-    set remind me date of newReminder to (due date of newReminder)
-    ${notesClause}
-    return id of newReminder
-  end tell
-end tell`
-    const id = runScript(script)
-    return id || null
-  } catch {
-    return null
-  }
-}
-
-export function completeReminder(reminderId: string): void {
-  try {
-    const script = `
-tell application "Reminders"
-  if exists list "Jarvis" then
-    tell list "Jarvis"
-      set matchingReminders to (every reminder whose id is "${esc(reminderId)}")
-      repeat with r in matchingReminders
-        set completed of r to true
-      end repeat
-    end tell
-  end if
-end tell`
-    runScript(script)
-  } catch {
-    // silently ignore
-  }
-}
-
-export function deleteReminder(reminderId: string): void {
-  try {
-    const script = `
-tell application "Reminders"
-  if exists list "Jarvis" then
-    tell list "Jarvis"
-      set matchingReminders to (every reminder whose id is "${esc(reminderId)}")
-      repeat with r in matchingReminders
-        delete r
-      end repeat
-    end tell
-  end if
-end tell`
-    runScript(script)
-  } catch {
-    // silently ignore
-  }
-}
-
 export function deleteCalendarEvent(uid: string): void {
   try {
     const script = `
@@ -212,6 +125,6 @@ tell application "Calendar"
 end tell`
     runScript(script)
   } catch {
-    // silently ignore — event may already be deleted
+    // silently ignore
   }
 }

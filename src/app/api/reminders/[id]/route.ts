@@ -1,5 +1,5 @@
 import { deleteReminderRecord, getReminderById, updateReminderRecord } from '@/lib/db'
-import { completeReminder, deleteReminder } from '@/lib/calendar/applescript'
+import { completeReminder, deleteReminder } from '@/lib/macos'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'

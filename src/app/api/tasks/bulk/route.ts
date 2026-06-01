@@ -1,5 +1,5 @@
 import { replaceDailyTasksForDate, updateDailyTask } from '@/lib/db'
-import { createCalendarEvent, deleteCalendarEvent } from '@/lib/calendar/applescript'
+import { createCalendarEvent, deleteCalendarEvent } from '@/lib/macos'
 import { NextResponse } from 'next/server'
 
 interface TaskInput {
