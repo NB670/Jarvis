@@ -9,6 +9,8 @@ contextBridge.exposeInMainWorld('voiceAPI', {
     ipcRenderer.on('voice:state', _stateListener)
   },
   close: () => {
+    if (_stateListener) ipcRenderer.removeListener('voice:state', _stateListener)
+    _stateListener = null
     ipcRenderer.send('voice:close')
   },
 })
