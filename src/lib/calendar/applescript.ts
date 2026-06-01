@@ -139,7 +139,10 @@ export function createReminder(title: string, dueAt: Date, notes?: string): stri
     const notesClause = notes ? `set body of newReminder to "${esc(notes)}"` : ''
     const script = `
 tell application "Reminders"
-  tell default list
+  if not (exists list "Jarvis") then
+    make new list with properties {name:"Jarvis"}
+  end if
+  tell list "Jarvis"
     set newReminder to make new reminder with properties {name:"${esc(title)}"}
     set due date of newReminder to current date
     set year of (due date of newReminder) to ${year}
@@ -162,9 +165,13 @@ export function deleteReminder(reminderId: string): void {
   try {
     const script = `
 tell application "Reminders"
-  set theReminder to reminder id "${esc(reminderId)}"
-  if theReminder is not missing value then
-    delete theReminder
+  if exists list "Jarvis" then
+    tell list "Jarvis"
+      set matchingReminders to (every reminder whose id is "${esc(reminderId)}")
+      repeat with r in matchingReminders
+        delete r
+      end repeat
+    end tell
   end if
 end tell`
     runScript(script)
