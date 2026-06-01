@@ -74,7 +74,8 @@ function applyMigrations(dbPath) {
     } else {
       const taskCols = db.prepare('PRAGMA table_info(DailyTask)').all()
       if (!taskCols.find((c) => c.name === 'type')) {
-        db.exec(`ALTER TABLE "DailyTask" ADD COLUMN "type" TEXT NOT NULL DEFAULT 'block'`)
+        db.exec(`ALTER TABLE "DailyTask" ADD COLUMN "type" TEXT DEFAULT 'block'`)
+        db.exec(`UPDATE "DailyTask" SET "type" = 'block' WHERE "type" IS NULL`)
       }
     }
   } catch (e) {
