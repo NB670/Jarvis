@@ -20,10 +20,13 @@ export async function runJarvisChat(userText: string, imageDataUrls: string[] = 
 
   const ctx = await buildContext([{ role: 'user', content: userContent }], convId)
 
-  const reply = await chat(ctx.messages, {
+  const rawReply = await chat(ctx.messages, {
     extraTools: jarvisTools.map((t) => t.definition),
     onExtraToolCall: handleJarvisToolCall,
   })
+
+  const endSession = rawReply.includes('[END_SESSION]')
+  const reply = rawReply.replace(/\[END_SESSION\]/g, '').trim()
 
   await appendChatMessages([
     { role: 'user', content: userText },
@@ -42,5 +45,5 @@ export async function runJarvisChat(userText: string, imageDataUrls: string[] = 
 
   updateMemoryAsync(ctx.memory, userText, reply)
 
-  return { message: reply, conversationId: convId }
+  return { message: reply, conversationId: convId, endSession }
 }
