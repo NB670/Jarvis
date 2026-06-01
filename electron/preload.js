@@ -1,4 +1,11 @@
 'use strict'
-// Minimal context-isolation preload — no IPC needed, app uses HTTP API routes
-const { contextBridge } = require('electron')
+const { contextBridge, ipcRenderer } = require('electron')
 contextBridge.exposeInMainWorld('isElectron', true)
+contextBridge.exposeInMainWorld('voiceAPI', {
+  onStateChange: (cb) => {
+    ipcRenderer.on('voice:state', (_event, data) => cb(data))
+  },
+  close: () => {
+    ipcRenderer.send('voice:close')
+  },
+})
