@@ -157,35 +157,21 @@ function TaskRow({
       />
 
       {/* Content */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 flex items-center gap-2">
         <InlineEdit
           value={task.title}
           onSave={(v) => onUpdate(task.id, { title: v })}
-          className={`text-sm block w-full transition-all duration-200 ${
+          className={`text-sm transition-all duration-200 ${
             task.completedAt
               ? 'line-through text-zinc-400 dark:text-zinc-500'
               : 'text-zinc-900 dark:text-zinc-100'
           }`}
         />
-        <div className="flex items-center gap-1 mt-0.5">
-          <InlineEdit
-            value={task.startAt ?? ''}
-            onSave={(v) => onUpdate(task.id, { startAt: v || null })}
-            className="text-xs text-zinc-400 w-12"
-            placeholder="--:--"
-          />
-          {(task.startAt || hovered) && <span className="text-xs text-zinc-300 dark:text-zinc-600">·</span>}
-          <InlineEdit
-            value={task.durationMinutes ? String(task.durationMinutes) : ''}
-            onSave={(v) => {
-              const n = parseInt(v)
-              if (!isNaN(n) && n > 0) onUpdate(task.id, { durationMinutes: n })
-            }}
-            className="text-xs text-zinc-400 w-12"
-            placeholder="--min"
-          />
-          {(task.durationMinutes || hovered) && <span className="text-xs text-zinc-400">min</span>}
-        </div>
+        {task.startAt && (
+          <span className="text-xs text-zinc-400 flex-shrink-0">
+            {task.startAt}{task.durationMinutes ? ` · ${task.durationMinutes}min` : ''}
+          </span>
+        )}
       </div>
 
       {/* Delete */}
@@ -360,13 +346,32 @@ export function TodayPanel({ date, onDateChange }: { date: string; onDateChange:
   const handleDragEnd = (e: DragEndEvent) => {
     setActiveId(null)
     const { active, over } = e
-    if (over && active.id !== over.id) {
-      setTasks((prev) => {
-        const oldIndex = prev.findIndex((t) => t.id === active.id)
-        const newIndex = prev.findIndex((t) => t.id === over.id)
-        return arrayMove(prev, oldIndex, newIndex)
-      })
-    }
+    if (!over || active.id === over.id) return
+
+    setTasks((prev) => {
+      const oldIndex = prev.findIndex((t) => t.id === active.id)
+      const newIndex = prev.findIndex((t) => t.id === over.id)
+      const reordered = arrayMove(prev, oldIndex, newIndex)
+
+      // Swap startAt/durationMinutes between the two moved tasks so calendar order matches
+      const a = prev[oldIndex]
+      const b = prev[newIndex]
+      if (a.startAt || b.startAt) {
+        const aTime = { startAt: a.startAt, durationMinutes: a.durationMinutes }
+        const bTime = { startAt: b.startAt, durationMinutes: b.durationMinutes }
+        // Fire-and-forget calendar sync
+        fetch(`/api/tasks/${a.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bTime) })
+        fetch(`/api/tasks/${b.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(aTime) })
+        // Reflect swap in local state too
+        return reordered.map((t) => {
+          if (t.id === a.id) return { ...t, ...bTime }
+          if (t.id === b.id) return { ...t, ...aTime }
+          return t
+        })
+      }
+
+      return reordered
+    })
   }
 
   const activeTask = activeId ? tasks.find((t) => t.id === activeId) ?? null : null
