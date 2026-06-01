@@ -39,7 +39,17 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     if ('startAt' in body) fields.startAt = body.startAt ?? null
     if (typeof body.durationMinutes === 'number') fields.durationMinutes = body.durationMinutes
     if (Object.keys(fields).length > 0) {
+      const existing = await prisma.dailyTask.findUnique({ where: { id } })
       const task = await updateDailyTask(id, fields)
+      // Sync calendar: delete old event and recreate with updated values
+      if (existing?.calendarEventId) deleteCalendarEvent(existing.calendarEventId)
+      try {
+        const eventId = createCalendarEvent(task.title, task.date, task.startAt, task.durationMinutes)
+        if (eventId) {
+          const updated = await updateDailyTask(id, { calendarEventId: eventId })
+          return NextResponse.json(updated)
+        }
+      } catch { /* calendar unavailable */ }
       return NextResponse.json(task)
     }
     return NextResponse.json({ error: 'no valid fields' }, { status: 400 })
