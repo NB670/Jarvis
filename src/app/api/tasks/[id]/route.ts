@@ -5,7 +5,12 @@ import { NextResponse } from 'next/server'
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const body = (await req.json()) as { completed?: boolean }
+  const body = (await req.json()) as {
+    completed?: boolean
+    title?: string
+    startAt?: string | null
+    durationMinutes?: number
+  }
 
   try {
     if (body.completed === true) {
@@ -17,7 +22,16 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       const task = await updateDailyTask(id, { completedAt: null })
       return NextResponse.json(task)
     }
-    return NextResponse.json({ error: 'completed boolean is required' }, { status: 400 })
+    // Field edits
+    const fields: Record<string, unknown> = {}
+    if (typeof body.title === 'string') fields.title = body.title
+    if ('startAt' in body) fields.startAt = body.startAt ?? null
+    if (typeof body.durationMinutes === 'number') fields.durationMinutes = body.durationMinutes
+    if (Object.keys(fields).length > 0) {
+      const task = await updateDailyTask(id, fields)
+      return NextResponse.json(task)
+    }
+    return NextResponse.json({ error: 'no valid fields' }, { status: 400 })
   } catch {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
