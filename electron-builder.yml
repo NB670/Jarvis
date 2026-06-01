@@ -1,5 +1,5 @@
-appId: com.jarvis.notes
-productName: Notes
+appId: com.jarvis.jnotes
+productName: Jnotes
 copyright: "Copyright © 2026"
 
 asar: false
@@ -27,7 +27,7 @@ mac:
   icon: electron/assets/icon.icns
 
 dmg:
-  title: "Notes"
+  title: "Jnotes"
   contents:
     - x: 130
       y: 220

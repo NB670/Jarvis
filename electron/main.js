@@ -142,7 +142,7 @@ function createWindow(port) {
     y: saved.y,
     minWidth: 700,
     minHeight: 500,
-    title: 'Notes',
+    title: 'Jnotes',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
