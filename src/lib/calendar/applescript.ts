@@ -127,6 +127,52 @@ end tell`
   }
 }
 
+export function createReminder(title: string, dueAt: Date, notes?: string): string | null {
+  try {
+    const month = dueAt.getMonth() + 1
+    const day = dueAt.getDate()
+    const year = dueAt.getFullYear()
+    const hours = dueAt.getHours()
+    const minutes = dueAt.getMinutes()
+    const seconds = dueAt.getSeconds()
+    const timeSeconds = hours * 3600 + minutes * 60 + seconds
+    const notesClause = notes ? `set body of newReminder to "${esc(notes)}"` : ''
+    const script = `
+tell application "Reminders"
+  tell default list
+    set newReminder to make new reminder with properties {name:"${esc(title)}"}
+    set due date of newReminder to current date
+    set year of (due date of newReminder) to ${year}
+    set month of (due date of newReminder) to ${month}
+    set day of (due date of newReminder) to ${day}
+    set time of (due date of newReminder) to ${timeSeconds}
+    set remind me date of newReminder to (due date of newReminder)
+    ${notesClause}
+    return id of newReminder
+  end tell
+end tell`
+    const id = runScript(script)
+    return id || null
+  } catch {
+    return null
+  }
+}
+
+export function deleteReminder(reminderId: string): void {
+  try {
+    const script = `
+tell application "Reminders"
+  set theReminder to reminder id "${esc(reminderId)}"
+  if theReminder is not missing value then
+    delete theReminder
+  end if
+end tell`
+    runScript(script)
+  } catch {
+    // silently ignore
+  }
+}
+
 export function deleteCalendarEvent(uid: string): void {
   try {
     const script = `

@@ -63,6 +63,19 @@ model CalendarEvent {
   @@index([startAt])
 }
 
+model Reminder {
+  id          String    @id @default(cuid())
+  title       String
+  dueAt       DateTime
+  notes       String?
+  reminderId  String?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([dueAt])
+  @@index([completedAt])
+}
+
 model DailyTask {
   id              String    @id @default(cuid())
   date            String

@@ -1,4 +1,4 @@
-import { getMemory, getRecentChatMessages, getUpcomingCalendarEvents, listNotes, listDailyTasksForDate } from '@/lib/db'
+import { getMemory, getRecentChatMessages, getUpcomingCalendarEvents, listNotes, listDailyTasksForDate, listUpcomingReminders } from '@/lib/db'
 import { jarvisChatSystemPrompt } from '@/lib/llm/prompts'
 import type { ChatMessage, JarvisMemoryData } from '@/lib/llm/types'
 import type { DailyTask } from '@prisma/client'
@@ -11,12 +11,15 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
+import type { Reminder } from '@prisma/client'
+
 function formatMemory(
   mem: JarvisMemoryData,
   notes: { title: string; content: string }[],
   events: { title: string; startAt: Date }[],
   tasksByDate: Map<string, DailyTask[]>,
   today: string,
+  reminders: Reminder[],
 ): string {
   const goalsBlock = mem.goals.length
     ? mem.goals
@@ -74,6 +77,15 @@ function formatMemory(
     })
     .join('\n')
 
+  const now = new Date()
+  const remindersBlock = reminders.length
+    ? reminders.map((r) => {
+        const daysUntil = Math.ceil((r.dueAt.getTime() - now.getTime()) / 86400000)
+        const urgency = daysUntil <= 0 ? ' [OVERDUE]' : daysUntil === 1 ? ' [DUE TOMORROW]' : daysUntil <= 3 ? ` [in ${daysUntil} days]` : ''
+        return `- ${r.dueAt.toISOString().slice(0, 10)}: ${r.title}${urgency}${r.notes ? ` — ${r.notes}` : ''}`
+      }).join('\n')
+    : '(none)'
+
   return [
     'GOALS:',
     goalsBlock,
@@ -93,6 +105,9 @@ function formatMemory(
     '',
     'SCHEDULED TASKS (next 7 days):',
     tasksBlock,
+    '',
+    'REMINDERS & DEADLINES:',
+    remindersBlock,
   ].join('\n')
 }
 
@@ -104,16 +119,17 @@ export async function buildContext(extraMessages: ChatMessage[], conversationId?
     return d.toISOString().slice(0, 10)
   })
 
-  const [mem, notes, recentChat, events, ...taskArrays] = await Promise.all([
+  const [mem, notes, recentChat, events, reminders, ...taskArrays] = await Promise.all([
     getMemory(),
     listNotes(),
     getRecentChatMessages(20, conversationId),
     getUpcomingCalendarEvents(7),
+    listUpcomingReminders(30),
     ...dates.map((d) => listDailyTasksForDate(d)),
   ])
 
   const tasksByDate = new Map(dates.map((d, i) => [d, taskArrays[i]]))
-  const memoryText = formatMemory(mem, notes, events, tasksByDate, today)
+  const memoryText = formatMemory(mem, notes, events, tasksByDate, today, reminders)
 
   const systemPrompt = `${jarvisChatSystemPrompt()}\n\nMEMORY_CONTEXT:\n${memoryText}`
 

@@ -4,8 +4,9 @@ import type { JarvisMemoryData } from '@/lib/llm/types'
 import { useCallback, useState } from 'react'
 import { ChatInterface } from './ChatInterface'
 import { MemoryView } from './MemoryView'
+import { RemindersView } from './RemindersView'
 
-type Tab = 'chat' | 'memory'
+type Tab = 'chat' | 'memory' | 'reminders'
 
 interface Conversation {
   id: string
@@ -133,6 +134,20 @@ export function JarvisClient({ initialMemory, initialConversations, initialActiv
             </svg>
             Memory
           </button>
+          <button
+            onClick={() => setTab('reminders')}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              tab === 'reminders'
+                ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100'
+                : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100'
+            }`}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M7 1v1M7 12v1M1 7H0M2.2 2.2l.7.7M11.8 2.2l-.7.7M13 7h1M7 3a4 4 0 000 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+              <path d="M5 11h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+            </svg>
+            Reminders
+          </button>
         </div>
 
         {tab === 'chat' && (
@@ -185,6 +200,7 @@ export function JarvisClient({ initialMemory, initialConversations, initialActiv
         )}
 
         {tab === 'memory' && <div className="flex-1" />}
+        {tab === 'reminders' && <div className="flex-1" />}
       </div>
 
       {/* Main area */}
@@ -208,7 +224,9 @@ export function JarvisClient({ initialMemory, initialConversations, initialActiv
               }}
             />
           )
-          : <MemoryView initialMemory={initialMemory} />
+          : tab === 'memory'
+          ? <MemoryView initialMemory={initialMemory} />
+          : <RemindersView />
         }
       </div>
 
