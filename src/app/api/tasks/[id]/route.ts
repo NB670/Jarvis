@@ -1,5 +1,5 @@
 import { deleteDailyTask, updateDailyTask } from '@/lib/db'
-import { deleteCalendarEvent } from '@/lib/calendar/applescript'
+import { createCalendarEvent, deleteCalendarEvent } from '@/lib/calendar/applescript'
 import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
 
@@ -14,12 +14,23 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
   try {
     if (body.completed === true) {
-      const task = await updateDailyTask(id, { completedAt: new Date() })
-      if (task.calendarEventId) deleteCalendarEvent(task.calendarEventId)
+      const existing = await prisma.dailyTask.findUnique({ where: { id } })
+      const task = await updateDailyTask(id, { completedAt: new Date(), calendarEventId: null })
+      if (existing?.calendarEventId) deleteCalendarEvent(existing.calendarEventId)
       return NextResponse.json(task)
     }
     if (body.completed === false) {
       const task = await updateDailyTask(id, { completedAt: null })
+      // Recreate calendar event if the task has a time
+      if (!task.calendarEventId) {
+        try {
+          const eventId = createCalendarEvent(task.title, task.date, task.startAt, task.durationMinutes)
+          if (eventId) {
+            const updated = await updateDailyTask(id, { calendarEventId: eventId })
+            return NextResponse.json(updated)
+          }
+        } catch { /* calendar unavailable */ }
+      }
       return NextResponse.json(task)
     }
     // Field edits
