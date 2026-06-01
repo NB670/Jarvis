@@ -258,6 +258,7 @@ export function TodayPanel({ date, onDateChange }: { date: string; onDateChange:
   const [removingIds, setRemovingIds] = useState<Set<string>>(new Set())
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [taskType, setTaskType] = useState<'block' | 'todo'>('block')
   const [activeId, setActiveId] = useState<string | null>(null)
   const today = todayDate()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -286,7 +287,7 @@ export function TodayPanel({ date, onDateChange }: { date: string; onDateChange:
       const res = await fetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rawInput: raw, date }),
+        body: JSON.stringify({ rawInput: raw, date, type: taskType }),
       })
       if (res.ok) {
         const task = (await res.json()) as DailyTask
@@ -306,7 +307,7 @@ export function TodayPanel({ date, onDateChange }: { date: string; onDateChange:
       setLoading(false)
       inputRef.current?.focus()
     }
-  }, [input, date])
+  }, [input, date, taskType])
 
   const handleComplete = useCallback(async (id: string, completed: boolean) => {
     setTasks((prev) =>
@@ -353,16 +354,13 @@ export function TodayPanel({ date, onDateChange }: { date: string; onDateChange:
       const newIndex = prev.findIndex((t) => t.id === over.id)
       const reordered = arrayMove(prev, oldIndex, newIndex)
 
-      // Swap startAt/durationMinutes between the two moved tasks so calendar order matches
       const a = prev[oldIndex]
       const b = prev[newIndex]
-      if (a.startAt || b.startAt) {
+      if (a.type !== 'todo' && b.type !== 'todo' && (a.startAt || b.startAt)) {
         const aTime = { startAt: a.startAt, durationMinutes: a.durationMinutes }
         const bTime = { startAt: b.startAt, durationMinutes: b.durationMinutes }
-        // Fire-and-forget calendar sync
         fetch(`/api/tasks/${a.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bTime) })
         fetch(`/api/tasks/${b.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(aTime) })
-        // Reflect swap in local state too
         return reordered.map((t) => {
           if (t.id === a.id) return { ...t, ...bTime }
           if (t.id === b.id) return { ...t, ...aTime }
@@ -421,13 +419,28 @@ export function TodayPanel({ date, onDateChange }: { date: string; onDateChange:
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleAdd() }}
-            placeholder='Add a task… (e.g. "gym 9am 1hr")'
+            placeholder={taskType === 'block' ? 'Add a block… (e.g. "gym 9am 1hr")' : 'Add a to-do…'}
             disabled={loading}
             className="flex-1 text-sm bg-transparent border-none outline-none text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-600 transition-opacity duration-150 disabled:opacity-50"
           />
           {loading && (
             <span className="text-xs text-zinc-400 animate-pulse">parsing…</span>
           )}
+        </div>
+        <div className="flex items-center gap-1 mt-1.5">
+          {(['block', 'todo'] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTaskType(t)}
+              className={`text-xs px-2.5 py-0.5 rounded-full transition-all duration-150 ${
+                taskType === t
+                  ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-medium'
+                  : 'text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-400'
+              }`}
+            >
+              {t === 'block' ? 'Block' : 'To-do'}
+            </button>
+          ))}
         </div>
       </div>
 
