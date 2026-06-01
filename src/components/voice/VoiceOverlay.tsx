@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 type VoiceState = 'listening' | 'thinking' | 'speaking'
 
@@ -19,6 +19,7 @@ export default function VoiceOverlay() {
   const [state, setState] = useState<VoiceState>('listening')
   const [turns, setTurns] = useState<Turn[]>([])
   const [pendingUser, setPendingUser] = useState<string>('')
+  const pendingUserRef = useRef('')
 
   useEffect(() => {
     const api = (window as unknown as { voiceAPI?: { onStateChange: (cb: (d: StatePayload) => void) => void; close: () => void } }).voiceAPI
@@ -27,17 +28,19 @@ export default function VoiceOverlay() {
     api.onStateChange((data: StatePayload) => {
       setState(data.state)
       if (data.state === 'thinking' && data.userText) {
+        pendingUserRef.current = data.userText
         setPendingUser(data.userText)
       }
       if (data.state === 'speaking' && data.replyText) {
         setTurns((prev) => {
-          const next = [...prev, { user: pendingUser, reply: data.replyText! }]
-          return next.slice(-3) // keep last 3
+          const next = [...prev, { user: pendingUserRef.current, reply: data.replyText! }]
+          return next.slice(-3)
         })
+        pendingUserRef.current = ''
         setPendingUser('')
       }
     })
-  }, [pendingUser])
+  }, []) // empty deps — register once only
 
   return (
     <div style={{
