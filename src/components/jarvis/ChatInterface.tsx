@@ -8,6 +8,14 @@ interface Message {
   role: 'user' | 'assistant'
   content: string
   images?: string[]
+  createdAt?: string
+}
+
+interface DayGroup {
+  date: string
+  label: string
+  preview: string
+  elementId: string
 }
 
 function MarkdownContent({ content }: { content: string }) {
@@ -88,7 +96,7 @@ function ThinkingDots() {
   )
 }
 
-export function ChatInterface({ initialMessages }: { initialMessages?: Message[] }) {
+export function ChatInterface({ initialMessages, dayGroups }: { initialMessages?: Message[]; dayGroups?: DayGroup[] }) {
   const [messages, setMessages] = useState<Message[]>(
     initialMessages?.length
       ? initialMessages
@@ -160,8 +168,22 @@ export function ChatInterface({ initialMessages }: { initialMessages?: Message[]
       {/* Messages */}
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
-          {messages.map((m, i) => (
-            <div key={i} className={`flex gap-3 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+          {messages.map((m, i) => {
+            const dateKey = m.createdAt?.slice(0, 10)
+            const prevDateKey = messages[i - 1]?.createdAt?.slice(0, 10)
+            const showDivider = dateKey && dateKey !== prevDateKey && dayGroups?.find(g => g.date === dateKey)
+            return (
+            <div key={i}>
+              {showDivider && (
+                <div id={`day-${dateKey}`} className="flex items-center gap-3 py-2 -mx-4 px-4">
+                  <div className="flex-1 h-px bg-zinc-100 dark:bg-zinc-800" />
+                  <span className="text-xs font-medium text-zinc-400 dark:text-zinc-500 flex-shrink-0">
+                    {showDivider.label}
+                  </span>
+                  <div className="flex-1 h-px bg-zinc-100 dark:bg-zinc-800" />
+                </div>
+              )}
+            <div className={`flex gap-3 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               {m.role === 'assistant' && (
                 <div className="w-7 h-7 rounded-full bg-zinc-900 dark:bg-zinc-100 flex items-center justify-center flex-shrink-0 mt-0.5">
                   <span className="text-white dark:text-zinc-900 text-xs font-bold">J</span>
@@ -188,7 +210,9 @@ export function ChatInterface({ initialMessages }: { initialMessages?: Message[]
                 )}
               </div>
             </div>
-          ))}
+            </div>
+          )})}
+
 
           {loading && (
             <div className="flex gap-3 justify-start">
