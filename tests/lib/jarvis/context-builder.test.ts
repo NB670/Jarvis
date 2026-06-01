@@ -18,6 +18,7 @@ vi.mock('@/lib/db', () => ({
     { id: 'c1', title: 'Team call', startAt: new Date('2026-05-26T10:00:00Z'), endAt: new Date('2026-05-26T11:00:00Z') },
   ]),
   listDailyTasksForDate: vi.fn().mockResolvedValue([]),
+  listUpcomingReminders: vi.fn().mockResolvedValue([]),
 }))
 
 describe('buildContext', () => {
