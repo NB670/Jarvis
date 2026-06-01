@@ -407,16 +407,16 @@ export function TodayPanel({ date, onDateChange }: { date: string; onDateChange:
     })
   }, [])
 
-  const handleCompleteReminder = useCallback(async (id: string) => {
+  const handleCompleteReminder = useCallback((id: string) => {
     setCompletingReminderIds((prev) => new Set(prev).add(id))
-    setTimeout(async () => {
+    setTimeout(() => {
       setReminders((prev) => prev.filter((r) => r.id !== id))
       setCompletingReminderIds((prev) => { const s = new Set(prev); s.delete(id); return s })
-      await fetch(`/api/reminders/${id}`, {
+      fetch(`/api/reminders/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ completedAt: new Date().toISOString() }),
-      })
+      }).catch(console.error)
     }, 250)
   }, [])
 
