@@ -5,6 +5,7 @@ const path = require('path')
 const fs = require('fs')
 const net = require('net')
 const http = require('http')
+const { startVoiceEngine, stopVoiceEngine } = require('./voice')
 
 if (!app.requestSingleInstanceLock()) {
   app.quit()
@@ -168,15 +169,18 @@ app.whenReady().then(async () => {
     startServer(port)
     await waitForServer(port)
     createWindow(port)
+    startVoiceEngine(port)
   } else {
     // Dev: next dev is already running on port 3737 (started by concurrently + wait-on in electron:dev)
     createWindow(3737)
+    startVoiceEngine(3737)
   }
 })
 
 app.on('window-all-closed', () => app.quit())
 
 app.on('will-quit', () => {
+  stopVoiceEngine()
   if (nextProcess) {
     nextProcess.kill()
     nextProcess = null
