@@ -180,6 +180,19 @@ export function MemoryView({ initialMemory }: Props) {
           {saving && <span className="text-xs text-zinc-400 animate-pulse">Saving…</span>}
         </div>
 
+        {/* Onboarding prompt when memory is empty */}
+        {mem.goals.length === 0 && mem.habits.length === 0 && mem.keyFacts.length === 0 && mem.interests.length === 0 && (
+          <div className="rounded-xl border border-dashed border-zinc-200 dark:border-zinc-700 p-5 space-y-2">
+            <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Jarvis doesn't know much about you yet</p>
+            <p className="text-xs text-zinc-400 leading-5">
+              The more you share, the better Jarvis can help you plan and prioritise. You can add things manually below, or just chat — Jarvis will pick things up automatically as you talk.
+            </p>
+            <p className="text-xs text-zinc-400 leading-5">
+              Try starting with a goal, a habit you're tracking, or a key fact about your life.
+            </p>
+          </div>
+        )}
+
         {/* Goals */}
         <Section title="Goals">
           {mem.goals.map((g, i) => (

@@ -100,6 +100,8 @@ export function ChatInterface({ conversationId, initialMessages, loading: extern
   const [input, setInput] = useState('')
   const [images, setImages] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
+  const [lastError, setLastError] = useState<string | null>(null)
+  const [lastUserMessage, setLastUserMessage] = useState<{ text: string; images: string[] } | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -137,14 +139,18 @@ export function ChatInterface({ conversationId, initialMessages, loading: extern
 
   const removeImage = (i: number) => setImages((prev) => prev.filter((_, j) => j !== i))
 
-  const send = async () => {
-    const text = input.trim()
-    if ((!text && images.length === 0) || loading) return
-    const sentImages = [...images]
-    setInput('')
-    setImages([])
-    if (textareaRef.current) textareaRef.current.style.height = 'auto'
-    setMessages((prev) => [...prev, { role: 'user', content: text, images: sentImages }])
+  const send = async (retryText?: string, retryImages?: string[]) => {
+    const text = retryText ?? input.trim()
+    const sentImages = retryImages ?? [...images]
+    if ((!text && sentImages.length === 0) || loading) return
+    setLastError(null)
+    if (!retryText) {
+      setInput('')
+      setImages([])
+      if (textareaRef.current) textareaRef.current.style.height = 'auto'
+      setMessages((prev) => [...prev, { role: 'user', content: text, images: sentImages }])
+    }
+    setLastUserMessage({ text, images: sentImages })
     setLoading(true)
 
     try {
@@ -159,18 +165,24 @@ export function ChatInterface({ conversationId, initialMessages, loading: extern
       })
       const data = (await res.json()) as { message?: string; error?: string; conversationId?: string }
 
+      if (!res.ok) {
+        setLastError(data.error ?? `Server error (${res.status})`)
+        return
+      }
+
       // If a new conversation was created server-side, update our ref and notify parent
       if (data.conversationId && data.conversationId !== activeConvId.current) {
         activeConvId.current = data.conversationId
         onConversationCreated?.(data.conversationId, text.slice(0, 60))
       }
 
+      setLastUserMessage(null)
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', content: data.message ?? data.error ?? 'Something went wrong.' },
+        { role: 'assistant', content: data.message ?? 'Something went wrong.' },
       ])
     } catch {
-      setMessages((prev) => [...prev, { role: 'assistant', content: 'Network error. Try again.' }])
+      setLastError('Network error — check your connection.')
     } finally {
       setLoading(false)
     }
@@ -231,6 +243,27 @@ export function ChatInterface({ conversationId, initialMessages, loading: extern
                 <div className="pt-1"><ThinkingDots /></div>
               </div>
             )}
+            {lastError && (
+              <div className="flex items-start gap-3">
+                <div className="w-7 h-7 rounded-full bg-red-100 dark:bg-red-950 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-red-500">
+                    <path d="M6 4v3M6 8.5v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.3"/>
+                  </svg>
+                </div>
+                <div className="flex-1 space-y-1.5">
+                  <p className="text-sm text-red-500 dark:text-red-400">{lastError}</p>
+                  {lastUserMessage && (
+                    <button
+                      onClick={() => send(lastUserMessage.text, lastUserMessage.images)}
+                      className="text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 underline transition-colors"
+                    >
+                      Retry
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
             <div ref={bottomRef} />
           </div>
         )}
@@ -283,7 +316,7 @@ export function ChatInterface({ conversationId, initialMessages, loading: extern
             />
 
             <button
-              onClick={send}
+              onClick={() => send()}
               disabled={loading || (!input.trim() && images.length === 0)}
               className="flex-shrink-0 mb-0.5 w-7 h-7 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 flex items-center justify-center disabled:opacity-30 transition-opacity"
             >

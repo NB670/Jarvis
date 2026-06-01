@@ -1,5 +1,5 @@
 import { deleteReminderRecord, getReminderById, updateReminderRecord } from '@/lib/db'
-import { deleteReminder } from '@/lib/calendar/applescript'
+import { completeReminder, deleteReminder } from '@/lib/calendar/applescript'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
@@ -12,7 +12,12 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   if (body.title) data.title = body.title
   if (body.dueAt) data.dueAt = new Date(body.dueAt)
   if ('notes' in body) data.notes = body.notes
+  const existing = await getReminderById(id)
   const reminder = await updateReminderRecord(id, data)
+  // Sync completion state to Apple Reminders
+  if ('completedAt' in body && body.completedAt && existing?.reminderId) {
+    completeReminder(existing.reminderId)
+  }
   return NextResponse.json(reminder)
 }
 

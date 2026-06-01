@@ -1,7 +1,7 @@
 'use client'
 
 import type { JarvisMemoryData } from '@/lib/llm/types'
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { ChatInterface } from './ChatInterface'
 import { MemoryView } from './MemoryView'
 import { RemindersView } from './RemindersView'
@@ -50,6 +50,13 @@ export function JarvisClient({ initialMemory, initialConversations, initialActiv
   const [messages, setMessages] = useState<Msg[]>(initialMessages)
   const [loadingConv, setLoadingConv] = useState(false)
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null)
+  const [search, setSearch] = useState('')
+
+  const filteredConversations = useMemo(() => {
+    if (!search.trim()) return conversations
+    const q = search.toLowerCase()
+    return conversations.filter((c) => c.title.toLowerCase().includes(q))
+  }, [conversations, search])
 
   const switchConversation = useCallback(async (id: string) => {
     if (id === activeConversationId) return
@@ -71,6 +78,7 @@ export function JarvisClient({ initialMemory, initialConversations, initialActiv
     setConversations((prev) => [conv, ...prev])
     setActiveConversationId(conv.id)
     setMessages([])
+    setSearch('')
   }, [])
 
   const deleteConversation = useCallback(async (id: string) => {
@@ -165,32 +173,61 @@ export function JarvisClient({ initialMemory, initialConversations, initialActiv
               </button>
             </div>
 
+            {/* Search */}
+            {conversations.length > 3 && (
+              <div className="px-3 pb-2">
+                <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
+                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none" className="text-zinc-400 flex-shrink-0">
+                    <circle cx="4.5" cy="4.5" r="3.5" stroke="currentColor" strokeWidth="1.3"/>
+                    <path d="M7.5 7.5L10 10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                  </svg>
+                  <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search…"
+                    className="flex-1 text-xs bg-transparent outline-none text-zinc-700 dark:text-zinc-300 placeholder-zinc-400 dark:placeholder-zinc-600"
+                  />
+                  {search && (
+                    <button onClick={() => setSearch('')} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
+                      <svg width="9" height="9" viewBox="0 0 9 9" fill="none">
+                        <path d="M1 1l7 7M8 1L1 8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Conversation list */}
             {conversations.length > 0 && (
               <>
-                <p className="px-4 pt-2 pb-1.5 text-[10px] font-semibold uppercase tracking-widest text-zinc-400">Conversations</p>
+                <p className="px-4 pt-1 pb-1.5 text-[10px] font-semibold uppercase tracking-widest text-zinc-400">Conversations</p>
                 <div className="flex-1 overflow-y-auto pb-4">
-                  {conversations.map((c) => (
-                    <button
-                      key={c.id}
-                      onClick={() => switchConversation(c.id)}
-                      onContextMenu={(e) => handleRightClick(e, c.id)}
-                      className={`w-full text-left px-4 py-2.5 transition-colors group ${
-                        activeConversationId === c.id
-                          ? 'bg-zinc-200 dark:bg-zinc-700'
-                          : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'
-                      }`}
-                    >
-                      <p className={`text-xs font-medium truncate transition-colors ${
-                        activeConversationId === c.id
-                          ? 'text-zinc-900 dark:text-zinc-100'
-                          : 'text-zinc-600 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-zinc-100'
-                      }`}>
-                        {c.title === 'New conversation' ? 'New conversation' : c.title}
-                      </p>
-                      <p className="text-xs text-zinc-400 dark:text-zinc-600 mt-0.5">{relativeTime(c.createdAt)}</p>
-                    </button>
-                  ))}
+                  {filteredConversations.length === 0 ? (
+                    <p className="px-4 py-3 text-xs text-zinc-400">No matches</p>
+                  ) : (
+                    filteredConversations.map((c) => (
+                      <button
+                        key={c.id}
+                        onClick={() => switchConversation(c.id)}
+                        onContextMenu={(e) => handleRightClick(e, c.id)}
+                        className={`w-full text-left px-4 py-2.5 transition-colors group ${
+                          activeConversationId === c.id
+                            ? 'bg-zinc-200 dark:bg-zinc-700'
+                            : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                        }`}
+                      >
+                        <p className={`text-xs font-medium truncate transition-colors ${
+                          activeConversationId === c.id
+                            ? 'text-zinc-900 dark:text-zinc-100'
+                            : 'text-zinc-600 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-zinc-100'
+                        }`}>
+                          {c.title}
+                        </p>
+                        <p className="text-xs text-zinc-400 dark:text-zinc-600 mt-0.5">{relativeTime(c.createdAt)}</p>
+                      </button>
+                    ))
+                  )}
                 </div>
               </>
             )}

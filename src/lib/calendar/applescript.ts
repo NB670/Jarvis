@@ -161,6 +161,25 @@ end tell`
   }
 }
 
+export function completeReminder(reminderId: string): void {
+  try {
+    const script = `
+tell application "Reminders"
+  if exists list "Jarvis" then
+    tell list "Jarvis"
+      set matchingReminders to (every reminder whose id is "${esc(reminderId)}")
+      repeat with r in matchingReminders
+        set completed of r to true
+      end repeat
+    end tell
+  end if
+end tell`
+    runScript(script)
+  } catch {
+    // silently ignore
+  }
+}
+
 export function deleteReminder(reminderId: string): void {
   try {
     const script = `
