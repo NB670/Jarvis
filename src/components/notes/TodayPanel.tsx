@@ -1,6 +1,6 @@
 'use client'
 
-import type { DailyTask, Reminder } from '@prisma/client'
+import type { DailyTask } from '@prisma/client'
 import {
   DndContext,
   DragOverlay,
@@ -101,12 +101,14 @@ function TaskRow({
   onComplete,
   onDelete,
   onUpdate,
+  onSyncToggle,
   isDragging,
 }: {
   task: DailyTask
   onComplete: (id: string, completed: boolean) => void
   onDelete: (id: string) => void
   onUpdate: (id: string, fields: Partial<Pick<DailyTask, 'title' | 'startAt' | 'durationMinutes'>>) => void
+  onSyncToggle: (id: string, reminderId: string | null) => void
   isDragging?: boolean
 }) {
   const [hovered, setHovered] = useState(false)
@@ -174,6 +176,24 @@ function TaskRow({
         )}
       </div>
 
+      {/* Bell / sync toggle */}
+      <button
+        onClick={() => onSyncToggle(task.id, task.reminderId ?? null)}
+        className={`w-5 h-5 flex items-center justify-center transition-all duration-150 flex-shrink-0 ${
+          task.reminderId
+            ? 'text-amber-400 opacity-100 scale-100'
+            : hovered
+              ? 'text-zinc-300 dark:text-zinc-600 opacity-100 scale-100 hover:text-amber-400'
+              : 'opacity-0 scale-75'
+        }`}
+        title={task.reminderId ? 'Unlink from Reminders' : 'Sync to Reminders'}
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill={task.reminderId ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        </svg>
+      </button>
+
       {/* Delete */}
       <button
         onClick={() => onDelete(task.id)}
@@ -223,11 +243,13 @@ function AnimatedTask({
   onComplete,
   onDelete,
   onUpdate,
+  onSyncToggle,
 }: {
   task: DailyTask & { _new?: boolean }
   onComplete: (id: string, completed: boolean) => void
   onDelete: (id: string) => void
   onUpdate: (id: string, fields: Partial<Pick<DailyTask, 'title' | 'startAt' | 'durationMinutes'>>) => void
+  onSyncToggle: (id: string, reminderId: string | null) => void
 }) {
   const [visible, setVisible] = useState(false)
 
@@ -245,61 +267,7 @@ function AnimatedTask({
         transform: visible ? 'translateY(0)' : 'translateY(-8px)',
       }}
     >
-      <TaskRow task={task} onComplete={onComplete} onDelete={onDelete} onUpdate={onUpdate} />
-    </div>
-  )
-}
-
-// ── Reminder helpers and row ──────────────────────────────────────────────
-
-function isSameDay(a: Date, b: Date): boolean {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  )
-}
-
-function formatReminderTime(date: Date): string {
-  const now = new Date()
-  if (isSameDay(date, now)) {
-    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-  }
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
-
-function ReminderRow({
-  reminder,
-  onComplete,
-  completing,
-}: {
-  reminder: Reminder
-  onComplete: (id: string) => void
-  completing: boolean
-}) {
-  const isOverdue = !isSameDay(new Date(reminder.dueAt), new Date()) && new Date(reminder.dueAt) < new Date()
-
-  return (
-    <div
-      className="flex items-center gap-3 px-4 py-2.5 border-b border-zinc-100 dark:border-zinc-800 transition-all duration-250 overflow-hidden"
-      style={{
-        opacity: completing ? 0 : 1,
-        maxHeight: completing ? '0px' : '60px',
-      }}
-    >
-      <div className="w-3 flex-shrink-0" />
-      <input
-        type="checkbox"
-        checked={false}
-        onChange={() => onComplete(reminder.id)}
-        className="w-4 h-4 rounded accent-zinc-600 flex-shrink-0 cursor-pointer"
-      />
-      <div className="flex-1 min-w-0 flex items-center gap-2">
-        <span className="text-sm text-zinc-700 dark:text-zinc-300 truncate">{reminder.title}</span>
-        <span className={`text-xs flex-shrink-0 ${isOverdue ? 'text-red-400' : 'text-zinc-400'}`}>
-          {formatReminderTime(new Date(reminder.dueAt))}
-        </span>
-      </div>
+      <TaskRow task={task} onComplete={onComplete} onDelete={onDelete} onUpdate={onUpdate} onSyncToggle={onSyncToggle} />
     </div>
   )
 }
@@ -314,8 +282,7 @@ export function TodayPanel({ date, onDateChange }: { date: string; onDateChange:
   const [loading, setLoading] = useState(false)
   const [taskType, setTaskType] = useState<'block' | 'todo'>('block')
   const [activeId, setActiveId] = useState<string | null>(null)
-  const [reminders, setReminders] = useState<Reminder[]>([])
-  const [completingReminderIds, setCompletingReminderIds] = useState<Set<string>>(new Set())
+  const [syncToReminders, setSyncToReminders] = useState(false)
   const today = todayDate()
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -333,15 +300,6 @@ export function TodayPanel({ date, onDateChange }: { date: string; onDateChange:
     const id = setInterval(fetchTasks, 30_000)
     return () => clearInterval(id)
   }, [fetchTasks])
-
-  const fetchReminders = useCallback(async () => {
-    const res = await fetch('/api/reminders?today=1')
-    if (res.ok) setReminders(await res.json())
-  }, [])
-
-  useEffect(() => {
-    fetchReminders()
-  }, [fetchReminders])
 
   const handleAdd = useCallback(async () => {
     const raw = input.trim()
@@ -367,12 +325,29 @@ export function TodayPanel({ date, onDateChange }: { date: string; onDateChange:
           })
         })
         setTimeout(() => setNewIds((prev) => { const s = new Set(prev); s.delete(task.id); return s }), 600)
+        if (syncToReminders) {
+          const dueAt = `${date}T${task.startAt ?? '06:00'}:00`
+          const remRes = await fetch('/api/reminders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: task.title, dueAt }),
+          })
+          if (remRes.ok) {
+            const reminder = await remRes.json()
+            await fetch(`/api/tasks/${task.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ reminderId: reminder.id }),
+            })
+            setTasks((prev) => prev.map((t) => t.id === task.id ? { ...t, reminderId: reminder.id } : t))
+          }
+        }
       }
     } finally {
       setLoading(false)
       inputRef.current?.focus()
     }
-  }, [input, date, taskType])
+  }, [input, date, taskType, syncToReminders])
 
   const handleComplete = useCallback(async (id: string, completed: boolean) => {
     setTasks((prev) =>
@@ -407,18 +382,37 @@ export function TodayPanel({ date, onDateChange }: { date: string; onDateChange:
     })
   }, [])
 
-  const handleCompleteReminder = useCallback((id: string) => {
-    setCompletingReminderIds((prev) => new Set(prev).add(id))
-    setTimeout(() => {
-      setReminders((prev) => prev.filter((r) => r.id !== id))
-      setCompletingReminderIds((prev) => { const s = new Set(prev); s.delete(id); return s })
-      fetch(`/api/reminders/${id}`, {
+  const handleSyncToggle = useCallback(async (id: string, currentReminderId: string | null) => {
+    const task = tasks.find((t) => t.id === id)
+    if (!task) return
+
+    if (currentReminderId) {
+      // Unlink: delete reminder, clear task's reminderId
+      await fetch(`/api/reminders/${currentReminderId}`, { method: 'DELETE' })
+      await fetch(`/api/tasks/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ completedAt: new Date().toISOString() }),
-      }).catch(console.error)
-    }, 250)
-  }, [])
+        body: JSON.stringify({ reminderId: null }),
+      })
+      setTasks((prev) => prev.map((t) => t.id === id ? { ...t, reminderId: null } : t))
+    } else {
+      // Link: create reminder, store reminderId on task
+      const dueAt = `${task.date}T${task.startAt ?? '06:00'}:00`
+      const remRes = await fetch('/api/reminders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: task.title, dueAt }),
+      })
+      if (!remRes.ok) return
+      const reminder = await remRes.json()
+      await fetch(`/api/tasks/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reminderId: reminder.id }),
+      })
+      setTasks((prev) => prev.map((t) => t.id === id ? { ...t, reminderId: reminder.id } : t))
+    }
+  }, [tasks])
 
   const handleDragStart = (e: DragStartEvent) => setActiveId(String(e.active.id))
 
@@ -519,6 +513,15 @@ export function TodayPanel({ date, onDateChange }: { date: string; onDateChange:
               {t === 'block' ? 'Block' : 'To-do'}
             </button>
           ))}
+          <label className="ml-auto flex items-center gap-1.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={syncToReminders}
+              onChange={(e) => setSyncToReminders(e.target.checked)}
+              className="w-3.5 h-3.5 rounded accent-amber-500 cursor-pointer"
+            />
+            <span className="text-xs text-zinc-400 dark:text-zinc-500">Sync to Reminders</span>
+          </label>
         </div>
       </div>
 
@@ -554,6 +557,7 @@ export function TodayPanel({ date, onDateChange }: { date: string; onDateChange:
                     onComplete={handleComplete}
                     onDelete={handleDelete}
                     onUpdate={handleUpdate}
+                    onSyncToggle={handleSyncToggle}
                   />
                 ) : (
                   <TaskRow
@@ -561,6 +565,7 @@ export function TodayPanel({ date, onDateChange }: { date: string; onDateChange:
                     onComplete={handleComplete}
                     onDelete={handleDelete}
                     onUpdate={handleUpdate}
+                    onSyncToggle={handleSyncToggle}
                   />
                 )}
               </div>
@@ -572,23 +577,6 @@ export function TodayPanel({ date, onDateChange }: { date: string; onDateChange:
           </DragOverlay>
         </DndContext>
 
-        {reminders.length > 0 && (
-          <div>
-            <div className="px-4 pt-4 pb-1.5">
-              <span className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wide">
-                Reminders
-              </span>
-            </div>
-            {reminders.map((r) => (
-              <ReminderRow
-                key={r.id}
-                reminder={r}
-                onComplete={handleCompleteReminder}
-                completing={completingReminderIds.has(r.id)}
-              />
-            ))}
-          </div>
-        )}
       </div>
     </div>
   )
