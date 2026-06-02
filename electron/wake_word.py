@@ -14,9 +14,12 @@ Protocol (stdin ← Node):
   END            — end session now
 """
 import os, sys, struct, time, threading
+import tempfile
 import numpy as np
 import pyaudio
 import mlx_whisper
+import soundfile as sf
+from kokoro import KPipeline
 
 RATE            = 16000
 CHUNK           = 512
@@ -27,6 +30,7 @@ MIN_SPEECH_FRAMES = 4
 MAX_SPEECH_S    = 30
 SESSION_TIMEOUT_S = 30
 WHISPER_MODEL   = os.environ.get('JARVIS_WHISPER_MODEL', 'mlx-community/whisper-base-mlx')
+TTS_VOICE       = os.environ.get('JARVIS_TTS_VOICE', 'af_heart')
 
 # ── Audio utils ────────────────────────────────────────────────────────────────
 
@@ -82,16 +86,49 @@ def get_cmd():
         c = _cmd; _cmd = None
     return c
 
-def wait_for_cmd(expected, poll=0.05):
+def speak(text):
+    """Generate TTS for text via Kokoro. Returns WAV file path, or None on error."""
+    with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as f:
+        wav_path = f.name
+    try:
+        generator = tts_pipeline(text, voice=TTS_VOICE, speed=1.0)
+        audio_chunks = []
+        for _, _, audio in generator:
+            audio_chunks.append(audio)
+        if not audio_chunks:
+            try: os.unlink(wav_path)
+            except: pass
+            return None
+        full_audio = np.concatenate(audio_chunks) if len(audio_chunks) > 1 else audio_chunks[0]
+        sf.write(wav_path, full_audio, 24000)
+        return wav_path
+    except Exception as e:
+        sys.stderr.write(f'[voice] TTS error: {e}\n')
+        try: os.unlink(wav_path)
+        except: pass
+        return None
+
+def wait_for_cmd_or_speak(expected, poll=0.05):
+    """Wait for one of `expected`. If SPEAK:<text> arrives, synthesize and continue waiting."""
     while True:
         c = get_cmd()
+        if c is None:
+            time.sleep(poll); continue
+        if c.startswith('SPEAK:'):
+            text = c[len('SPEAK:'):]
+            wav_path = speak(text)
+            if wav_path:
+                print(f'AUDIO:{wav_path}', flush=True)
+            continue
         if c in expected:
             return c
-        time.sleep(poll)
 
 # ── Main loop ──────────────────────────────────────────────────────────────────
 
 sys.stderr.write(f'[voice] using whisper model {WHISPER_MODEL}\n'); sys.stderr.flush()
+sys.stderr.write('[voice] loading kokoro tts...\n'); sys.stderr.flush()
+tts_pipeline = KPipeline(lang_code='a')
+sys.stderr.write('[voice] kokoro ready\n'); sys.stderr.flush()
 
 p = pyaudio.PyAudio()
 stream = p.open(format=pyaudio.paInt16, channels=1, rate=RATE, input=True,
@@ -142,7 +179,7 @@ try:
                 break
 
             print(f'TEXT:{text}', flush=True)
-            cmd = wait_for_cmd({'READY', 'END'})
+            cmd = wait_for_cmd_or_speak({'READY', 'END'})
             if cmd == 'END':
                 break
 
