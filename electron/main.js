@@ -71,6 +71,7 @@ function applyMigrations(dbPath) {
           "durationMinutes" INTEGER NOT NULL DEFAULT 30,
           "completedAt" DATETIME,
           "calendarEventId" TEXT,
+          "reminderId" TEXT,
           "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
         CREATE INDEX "DailyTask_date_idx" ON "DailyTask"("date");

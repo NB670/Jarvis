@@ -1,5 +1,6 @@
 import { replaceDailyTasksForDate, updateDailyTask } from '@/lib/db'
 import { createCalendarEvent, deleteCalendarEvent } from '@/lib/macos/calendar'
+import { deleteReminder } from '@/lib/macos/reminders'
 import type { JarvisTool } from './types'
 
 interface Args {
@@ -14,9 +15,10 @@ interface Args {
 
 async function handle(args: Args): Promise<string> {
   const { date, tasks } = args
-  const { deletedCalendarEventIds, created } = await replaceDailyTasksForDate(date, tasks)
+  const { deletedCalendarEventIds, deletedAppleReminderIds, created } = await replaceDailyTasksForDate(date, tasks)
 
   for (const uid of deletedCalendarEventIds) deleteCalendarEvent(uid)
+  for (const rid of deletedAppleReminderIds) deleteReminder(rid)
 
   await Promise.allSettled(
     created.map(async (task) => {

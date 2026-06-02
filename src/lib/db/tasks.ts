@@ -48,16 +48,29 @@ export async function deleteDailyTask(id: string) {
 export async function replaceDailyTasksForDate(
   date: string,
   tasks: Omit<CreateTaskInput, 'calendarEventId' | 'date'>[],
-): Promise<{ deletedCalendarEventIds: string[]; created: DailyTask[] }> {
+): Promise<{ deletedCalendarEventIds: string[]; deletedAppleReminderIds: string[]; created: DailyTask[] }> {
   const existing = await prisma.dailyTask.findMany({ where: { date } })
   const deletedCalendarEventIds = existing
     .map((t) => t.calendarEventId)
     .filter((id): id is string => id !== null)
+  const reminderDbIds = existing
+    .map((t) => t.reminderId)
+    .filter((id): id is string => id !== null)
+
+  const reminderRows = reminderDbIds.length > 0
+    ? await prisma.reminder.findMany({ where: { id: { in: reminderDbIds } } })
+    : []
+  const deletedAppleReminderIds = reminderRows
+    .map((r) => r.reminderId)
+    .filter((id): id is string => id !== null)
 
   const created = await prisma.$transaction(async (tx) => {
     await tx.dailyTask.deleteMany({ where: { date } })
+    if (reminderDbIds.length > 0) {
+      await tx.reminder.deleteMany({ where: { id: { in: reminderDbIds } } })
+    }
     return Promise.all(tasks.map((t) => tx.dailyTask.create({ data: { ...t, date } })))
   })
 
-  return { deletedCalendarEventIds, created }
+  return { deletedCalendarEventIds, deletedAppleReminderIds, created }
 }

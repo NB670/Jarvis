@@ -88,8 +88,10 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     if (task.calendarEventId) deleteCalendarEvent(task.calendarEventId)
     if (task.reminderId) {
       const reminder = await getReminderById(task.reminderId)
-      if (reminder?.reminderId) deleteReminder(reminder.reminderId)
-      await deleteReminderRecord(task.reminderId)
+      if (reminder) {
+        if (reminder.reminderId) deleteReminder(reminder.reminderId)
+        try { await deleteReminderRecord(task.reminderId) } catch { /* already gone */ }
+      }
     }
     await deleteDailyTask(id)
     return new NextResponse(null, { status: 204 })
