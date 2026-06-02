@@ -1,6 +1,6 @@
 'use strict'
 
-const { ipcMain, BrowserWindow, screen } = require('electron')
+const { ipcMain } = require('electron')
 const { spawn } = require('child_process')
 const fs = require('fs')
 const path = require('path')

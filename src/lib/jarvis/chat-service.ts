@@ -4,7 +4,7 @@ import { buildContext } from './context-builder'
 import { updateMemoryAsync } from './memory-service'
 import { jarvisTools, handleJarvisToolCall } from './tools'
 
-export async function runJarvisChat(userText: string, imageDataUrls: string[] = [], conversationId?: string) {
+export async function runJarvisChat(userText: string, imageDataUrls: string[] = [], conversationId?: string, voice = false) {
   let convId = conversationId
   if (!convId) {
     const conv = await createConversation()
@@ -18,7 +18,7 @@ export async function runJarvisChat(userText: string, imageDataUrls: string[] = 
       ]
     : userText
 
-  const ctx = await buildContext([{ role: 'user', content: userContent }], convId)
+  const ctx = await buildContext([{ role: 'user', content: userContent }], convId, voice)
 
   const rawReply = await chat(ctx.messages, {
     extraTools: jarvisTools.map((t) => t.definition),

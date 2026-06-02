@@ -111,7 +111,7 @@ function formatMemory(
   ].join('\n')
 }
 
-export async function buildContext(extraMessages: ChatMessage[], conversationId?: string) {
+export async function buildContext(extraMessages: ChatMessage[], conversationId?: string, voice = false) {
   const today = todayDate()
   const dates = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(today + 'T12:00:00')
@@ -131,7 +131,7 @@ export async function buildContext(extraMessages: ChatMessage[], conversationId?
   const tasksByDate = new Map(dates.map((d, i) => [d, taskArrays[i]]))
   const memoryText = formatMemory(mem, notes, events, tasksByDate, today, reminders)
 
-  const systemPrompt = `${jarvisChatSystemPrompt()}\n\nMEMORY_CONTEXT:\n${memoryText}`
+  const systemPrompt = `${jarvisChatSystemPrompt(voice)}\n\nMEMORY_CONTEXT:\n${memoryText}`
 
   const historyMessages: ChatMessage[] = recentChat.map((m) => ({
     role: m.role === 'user' ? 'user' : 'assistant',
