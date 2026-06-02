@@ -1,5 +1,9 @@
 'use strict'
 
+// Load .env into process.env for dev mode (Next.js does this for the server
+// but the Electron main process needs it too, e.g. for OPENAI_API_KEY)
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') })
+
 const { app, BrowserWindow, utilityProcess } = require('electron')
 const path = require('path')
 const fs = require('fs')
@@ -76,6 +80,11 @@ function applyMigrations(dbPath) {
       if (!taskCols.find((c) => c.name === 'type')) {
         db.exec(`ALTER TABLE "DailyTask" ADD COLUMN "type" TEXT DEFAULT 'block'`)
         db.exec(`UPDATE "DailyTask" SET "type" = 'block' WHERE "type" IS NULL`)
+      }
+
+      const taskCols2 = db.prepare('PRAGMA table_info(DailyTask)').all()
+      if (!taskCols2.find((c) => c.name === 'reminderId')) {
+        db.exec(`ALTER TABLE "DailyTask" ADD COLUMN "reminderId" TEXT`)
       }
     }
   } catch (e) {

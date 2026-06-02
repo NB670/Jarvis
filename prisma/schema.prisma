@@ -86,6 +86,7 @@ model DailyTask {
   durationMinutes Int       @default(30)
   completedAt     DateTime?
   calendarEventId String?
+  reminderId      String?
   createdAt       DateTime  @default(now())
 
   @@index([date])
