@@ -71,6 +71,7 @@ describe('POST /api/tasks', () => {
   })
 
   it('passes reminderId to createDailyTask when provided', async () => {
+    mockChatJson.mockResolvedValue(JSON.stringify({ title: 'Call dentist', startAt: null, durationMinutes: 30 }))
     mockCreateDailyTask.mockResolvedValue({ ...baseTask, type: 'todo', startAt: '06:00', reminderId: 'rem-1' })
     const { POST } = await import('@/app/api/tasks/route')
     const req = new Request('http://localhost/api/tasks', {
@@ -82,6 +83,47 @@ describe('POST /api/tasks', () => {
     expect(res.status).toBe(201)
     expect(mockCreateDailyTask).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'todo', startAt: '06:00' }),
+    )
+  })
+})
+
+describe('POST /api/tasks — todo startAt default', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.resetModules()
+    mockChatJson.mockResolvedValue(JSON.stringify({ title: 'Call dentist', startAt: null, durationMinutes: 30 }))
+    mockCreateDailyTask.mockResolvedValue({
+      ...baseTask,
+      type: 'todo',
+      startAt: '06:00',
+      reminderId: null,
+    })
+  })
+
+  it('defaults todo startAt to 06:00 when LLM returns null', async () => {
+    const { POST } = await import('@/app/api/tasks/route')
+    const req = new Request('http://localhost/api/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rawInput: 'call dentist', date: '2026-06-01', type: 'todo' }),
+    })
+    await POST(req)
+    expect(mockCreateDailyTask).toHaveBeenCalledWith(
+      expect.objectContaining({ startAt: '06:00', type: 'todo' }),
+    )
+  })
+
+  it('keeps explicit todo startAt when LLM returns one', async () => {
+    mockChatJson.mockResolvedValue(JSON.stringify({ title: 'Call dentist', startAt: '14:00', durationMinutes: 30 }))
+    const { POST } = await import('@/app/api/tasks/route')
+    const req = new Request('http://localhost/api/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rawInput: 'call dentist 2pm', date: '2026-06-01', type: 'todo' }),
+    })
+    await POST(req)
+    expect(mockCreateDailyTask).toHaveBeenCalledWith(
+      expect.objectContaining({ startAt: '14:00', type: 'todo' }),
     )
   })
 })

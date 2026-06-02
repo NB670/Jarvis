@@ -36,7 +36,7 @@ export async function POST(req: Request) {
     parsed = { title: body.rawInput.trim(), startAt: null, durationMinutes: 30 }
   }
 
-  if (taskType === 'todo') parsed.startAt = null
+  if (taskType === 'todo') parsed.startAt = parsed.startAt ?? '06:00'
 
   const task = await createDailyTask({
     date: body.date,
