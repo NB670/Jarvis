@@ -19,7 +19,7 @@ async function handle(args: Args): Promise<string> {
     reminderId: appleReminderId ?? undefined,
   })
 
-  const date = dueAt.toISOString().slice(0, 10)
+  const date = `${dueAt.getFullYear()}-${String(dueAt.getMonth() + 1).padStart(2, '0')}-${String(dueAt.getDate()).padStart(2, '0')}`
   const hours = dueAt.getHours()
   const minutes = dueAt.getMinutes()
   const startAt = (hours === 0 && minutes === 0)
@@ -54,7 +54,7 @@ export const remindersTool: JarvisTool = {
         type: 'object',
         properties: {
           title: { type: 'string', description: 'Short, clear reminder title' },
-          due_at: { type: 'string', description: 'ISO 8601 datetime string (e.g. 2026-06-05T09:00:00). Use noon (12:00) if no specific time is given.' },
+          due_at: { type: 'string', description: 'ISO 8601 datetime string (e.g. 2026-06-05T09:00:00). Use midnight (00:00) if no specific time is given — the task will default to 06:00.' },
           notes: { type: 'string', description: 'Optional extra context or description' },
         },
         required: ['title', 'due_at'],
