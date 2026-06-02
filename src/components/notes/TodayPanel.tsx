@@ -283,6 +283,7 @@ export function TodayPanel({ date, onDateChange }: { date: string; onDateChange:
   const [taskType, setTaskType] = useState<'block' | 'todo'>('block')
   const [activeId, setActiveId] = useState<string | null>(null)
   const [syncToReminders, setSyncToReminders] = useState(false)
+  const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set())
   const today = todayDate()
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -383,36 +384,44 @@ export function TodayPanel({ date, onDateChange }: { date: string; onDateChange:
   }, [])
 
   const handleSyncToggle = useCallback(async (id: string, currentReminderId: string | null) => {
+    if (togglingIds.has(id)) return
     const task = tasks.find((t) => t.id === id)
     if (!task) return
 
-    if (currentReminderId) {
-      // Unlink: delete reminder, clear task's reminderId
-      await fetch(`/api/reminders/${currentReminderId}`, { method: 'DELETE' })
-      await fetch(`/api/tasks/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reminderId: null }),
-      })
-      setTasks((prev) => prev.map((t) => t.id === id ? { ...t, reminderId: null } : t))
-    } else {
-      // Link: create reminder, store reminderId on task
-      const dueAt = `${task.date}T${task.startAt ?? '06:00'}:00`
-      const remRes = await fetch('/api/reminders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: task.title, dueAt }),
-      })
-      if (!remRes.ok) return
-      const reminder = await remRes.json()
-      await fetch(`/api/tasks/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reminderId: reminder.id }),
-      })
-      setTasks((prev) => prev.map((t) => t.id === id ? { ...t, reminderId: reminder.id } : t))
+    setTogglingIds((prev) => new Set(prev).add(id))
+    try {
+      if (currentReminderId) {
+        setTasks((prev) => prev.map((t) => t.id === id ? { ...t, reminderId: null } : t))
+        const res = await fetch(`/api/reminders/${currentReminderId}`, { method: 'DELETE' })
+        if (!res.ok) {
+          setTasks((prev) => prev.map((t) => t.id === id ? { ...t, reminderId: currentReminderId } : t))
+          return
+        }
+        await fetch(`/api/tasks/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reminderId: null }),
+        })
+      } else {
+        const dueAt = `${task.date}T${task.startAt ?? '06:00'}:00`
+        const remRes = await fetch('/api/reminders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: task.title, dueAt }),
+        })
+        if (!remRes.ok) return
+        const reminder = await remRes.json()
+        setTasks((prev) => prev.map((t) => t.id === id ? { ...t, reminderId: reminder.id } : t))
+        await fetch(`/api/tasks/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reminderId: reminder.id }),
+        })
+      }
+    } finally {
+      setTogglingIds((prev) => { const s = new Set(prev); s.delete(id); return s })
     }
-  }, [tasks])
+  }, [tasks, togglingIds])
 
   const handleDragStart = (e: DragStartEvent) => setActiveId(String(e.active.id))
 
