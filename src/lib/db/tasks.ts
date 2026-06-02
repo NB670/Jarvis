@@ -9,6 +9,7 @@ interface CreateTaskInput {
   startAt: string | null
   durationMinutes: number
   calendarEventId?: string | null
+  reminderId?: string | null
 }
 
 export async function createDailyTask(input: CreateTaskInput) {
@@ -34,6 +35,7 @@ export async function updateDailyTask(
     startAt: string | null
     durationMinutes: number
     type: string
+    reminderId: string | null
   }>,
 ) {
   return prisma.dailyTask.update({ where: { id }, data })

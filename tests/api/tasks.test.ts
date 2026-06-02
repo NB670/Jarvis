@@ -31,6 +31,7 @@ const baseTask = {
   rawInput: 'test',
   completedAt: null,
   calendarEventId: null,
+  reminderId: null,
   startAt: '09:00',
   durationMinutes: 60,
   createdAt: new Date(),
@@ -67,5 +68,20 @@ describe('POST /api/tasks', () => {
     })
     await POST(req)
     expect(mockCreateCalendarEvent).not.toHaveBeenCalled()
+  })
+
+  it('passes reminderId to createDailyTask when provided', async () => {
+    mockCreateDailyTask.mockResolvedValue({ ...baseTask, type: 'todo', startAt: '06:00', reminderId: 'rem-1' })
+    const { POST } = await import('@/app/api/tasks/route')
+    const req = new Request('http://localhost/api/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rawInput: 'call dentist', date: '2026-06-01', type: 'todo' }),
+    })
+    const res = await POST(req)
+    expect(res.status).toBe(201)
+    expect(mockCreateDailyTask).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'todo', startAt: '06:00' }),
+    )
   })
 })
