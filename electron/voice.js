@@ -3,26 +3,7 @@
 const { ipcMain, BrowserWindow, screen } = require('electron')
 const { spawn } = require('child_process')
 const fs = require('fs')
-const os = require('os')
 const path = require('path')
-
-// ── OpenAI helpers ────────────────────────────────────────────────────────────
-
-async function speak(text, apiKey) {
-  const res = await fetch('https://api.openai.com/v1/audio/speech', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'tts-1', voice: 'nova', input: text }),
-  })
-  if (!res.ok) throw new Error(`TTS error ${res.status}`)
-  const mp3 = path.join(os.tmpdir(), `jarvis-tts-${Date.now()}.mp3`)
-  fs.writeFileSync(mp3, Buffer.from(await res.arrayBuffer()))
-  await new Promise((resolve, reject) => {
-    const proc = spawn('afplay', [mp3])
-    proc.on('close', () => { try { fs.unlinkSync(mp3) } catch {} resolve() })
-    proc.on('error', (err) => { try { fs.unlinkSync(mp3) } catch {} reject(err) })
-  })
-}
 
 // ── Chat ──────────────────────────────────────────────────────────────────────
 
@@ -54,6 +35,7 @@ let wakeProcess = null
 
 // Resolves each time Python sends a TEXT:<text> line (or null for SESSION_DONE)
 let textResolve = null
+let audioResolve = null
 
 function onPythonLine(line) {
   if (line === 'WAKE' && !sessionActive) {
@@ -63,6 +45,8 @@ function onPythonLine(line) {
     })
   } else if (line.startsWith('TEXT:') && sessionActive) {
     if (textResolve) { textResolve(line.slice(5)); textResolve = null }
+  } else if (line.startsWith('AUDIO:') && sessionActive) {
+    if (audioResolve) { audioResolve(line.slice(6)); audioResolve = null }
   } else if (line === 'SESSION_DONE' && sessionActive) {
     if (textResolve) { textResolve(null); textResolve = null }
     endSession()
@@ -73,16 +57,21 @@ function waitForText() {
   return new Promise((resolve) => { textResolve = resolve })
 }
 
+function waitForAudio() {
+  return new Promise((resolve) => { audioResolve = resolve })
+}
+
+async function playWav(wavPath) {
+  await new Promise((resolve) => {
+    const proc = spawn('afplay', [wavPath])
+    proc.on('close', () => { try { fs.unlinkSync(wavPath) } catch {} ; resolve() })
+    proc.on('error', () => { try { fs.unlinkSync(wavPath) } catch {} ; resolve() })
+  })
+}
+
 async function startSession() {
   if (sessionActive) return
   sessionActive = true
-
-  const apiKey = process.env.OPENAI_API_KEY
-  if (!apiKey) {
-    console.error('[voice] OPENAI_API_KEY not set')
-    sessionActive = false
-    return
-  }
 
   let conversationId
   try {
@@ -115,7 +104,9 @@ async function startSession() {
     }
 
     try {
-      await speak(reply, apiKey)
+      wakeProcess?.stdin.write(`SPEAK:${reply.replace(/\n/g, ' ')}\n`)
+      const wavPath = await waitForAudio()
+      if (wavPath) await playWav(wavPath)
     } catch (e) {
       console.error('[voice] TTS error:', e.message)
     }
@@ -135,6 +126,7 @@ function endSession() {
   if (!sessionActive) return
   sessionActive = false
   if (textResolve) { textResolve(null); textResolve = null }
+  if (audioResolve) { audioResolve(null); audioResolve = null }
   console.log('[voice] Session ended')
 }
 
