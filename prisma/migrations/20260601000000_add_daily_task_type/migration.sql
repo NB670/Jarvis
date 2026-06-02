@@ -1,0 +1,1 @@
+ALTER TABLE "DailyTask" ADD COLUMN "type" TEXT NOT NULL DEFAULT 'block';
