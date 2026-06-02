@@ -1,4 +1,4 @@
-import { createReminderRecord } from '@/lib/db'
+import { createDailyTask, createReminderRecord } from '@/lib/db'
 import { createReminder } from '@/lib/macos/reminders'
 import type { JarvisTool } from './types'
 
@@ -10,18 +10,37 @@ interface Args {
 
 async function handle(args: Args): Promise<string> {
   const dueAt = new Date(args.due_at)
-  const reminderId = createReminder(args.title, dueAt, args.notes)
-  await createReminderRecord({
+
+  const appleReminderId = createReminder(args.title, dueAt, args.notes)
+  const reminder = await createReminderRecord({
     title: args.title,
     dueAt,
     notes: args.notes,
-    reminderId: reminderId ?? undefined,
+    reminderId: appleReminderId ?? undefined,
   })
+
+  const date = dueAt.toISOString().slice(0, 10)
+  const hours = dueAt.getHours()
+  const minutes = dueAt.getMinutes()
+  const startAt = (hours === 0 && minutes === 0)
+    ? '06:00'
+    : `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+
+  await createDailyTask({
+    date,
+    rawInput: args.title,
+    title: args.title,
+    type: 'todo',
+    startAt,
+    durationMinutes: 30,
+    reminderId: reminder.id,
+  })
+
   const label = dueAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-  const time = dueAt.getHours() !== 12 || dueAt.getMinutes() !== 0
+  const timeStr = (hours !== 0 || minutes !== 0)
     ? ` at ${dueAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
     : ''
-  return `Reminder set: "${args.title}" on ${label}${time}.`
+  return `Reminder set: "${args.title}" on ${label}${timeStr}.`
 }
 
 export const remindersTool: JarvisTool = {
